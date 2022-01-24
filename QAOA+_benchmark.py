@@ -3,10 +3,12 @@ Use the benchmark graphs to test the performance of QAOA+
 """
 import os, sys, argparse, glob
 import numpy as np
-from ansatz import qaoa_plus
 import pickle, random
-from utils.graph_funcs import *
-from utils.helper_funcs import *
+from pathlib import Path
+
+from qcopt.ansatz import qaoa_plus
+from qcopt.utils import graph_funcs
+from qcopt.utils import helper_funcs
 
 
 def parse_args():
@@ -42,21 +44,15 @@ def main():
     all_graphs = glob.glob(DQVAROOT + args.graph)
     graph_type = all_graphs[0].split("/")[-2]
 
-    savepath = DQVAROOT + "benchmark_results/{}_P{}_{}/".format(args.alg, args.P, args.sim)
-    if not os.path.isdir(savepath):
-        os.mkdir(savepath)
-
-    savepath += "{}/".format(graph_type)
-    if not os.path.isdir(savepath):
-        os.mkdir(savepath)
+    savepath = DQVAROOT + f"benchmark_results/{args.alg}_P{args.P}_{args.sim}/{graph_type}/"
+    Path(savepath).mkdir(parents=True, exist_ok=True)
 
     for graphfn in all_graphs:
         graphname = graphfn.split("/")[-1].strip(".txt")
-        cur_savepath = savepath + "{}/".format(graphname)
-        if not os.path.isdir(cur_savepath):
-            os.mkdir(cur_savepath)
+        cur_savepath = savepath + f"{graphname}/"
+        Path(cur_savepath).mkdir(parents=True, exist_ok=True)
 
-        G = graph_from_file(graphfn)
+        G = graph_funcs.graph_from_file(graphfn)
         print(graphname, G.edges())
         nq = len(G.nodes)
 

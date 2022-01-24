@@ -1,4 +1,4 @@
-import time, random, queue, copy, itertools
+import copy
 import numpy as np
 import networkx as nx
 
@@ -10,7 +10,8 @@ from qiskit import Aer
 from qiskit.quantum_info import Statevector
 
 from qcopt.ansatz import dqva
-from qcopt.utils import graph_funcs, helper_funcs
+from qcopt.utils import graph_funcs
+from qcopt.utils import helper_funcs
 
 
 def solve_mis(
