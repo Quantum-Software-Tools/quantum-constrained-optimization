@@ -12,8 +12,8 @@ from qiskit.transpiler import PassManager
 from qcopt.utils.graph_funcs import *
 from qcopt.utils.helper_funcs import *
 
-def apply_mixer(circ, alpha, init_state, G, barriers,
-                decompose_toffoli, mixer_order, verbose=0):
+
+def apply_mixer(circ, alpha, init_state, G, barriers, decompose_toffoli, mixer_order, verbose=0):
     """
     Apply the mixer unitary U_M(alpha) to circ
 
@@ -48,21 +48,20 @@ def apply_mixer(circ, alpha, init_state, G, barriers,
     if mixer_order is None:
         mixer_order = list(G.nodes)
     if verbose > 0:
-        print('Mixer order:', mixer_order)
+        print("Mixer order:", mixer_order)
 
     # Pad the given alpha parameters to account for the zeroed angles
-    pad_alpha = [None]*len(init_state)
+    pad_alpha = [None] * len(init_state)
     next_alpha = 0
     for qubit in mixer_order:
         bit = list(reversed(init_state))[qubit]
-        if bit == '1' or next_alpha >= len(alpha):
+        if bit == "1" or next_alpha >= len(alpha):
             continue
         else:
             pad_alpha[qubit] = alpha[next_alpha]
             next_alpha += 1
     if verbose > 0:
-        print('init_state: {}, alpha: {}, pad_alpha: {}'.format(init_state,
-                                                              alpha, pad_alpha))
+        print("init_state: {}, alpha: {}, pad_alpha: {}".format(init_state, alpha, pad_alpha))
 
     anc_idx = 0
     for qubit in mixer_order:
@@ -73,9 +72,7 @@ def apply_mixer(circ, alpha, init_state, G, barriers,
         neighbors = list(G.neighbors(qubit))
 
         if verbose > 0:
-            print('qubit:', qubit, 'num_qubits =', len(circ.qubits),
-                  'neighbors:', neighbors)
-
+            print("qubit:", qubit, "num_qubits =", len(circ.qubits), "neighbors:", neighbors)
 
         # construct a multi-controlled Toffoli gate, with open-controls on q's neighbors
         # Qiskit has bugs when attempting to simulate custom controlled gates.
@@ -89,12 +86,18 @@ def apply_mixer(circ, alpha, init_state, G, barriers,
             for ctrl in ctrl_qubits:
                 circ.x(ctrl)
         else:
-            mc_toffoli = ControlledGate('mc_toffoli', len(neighbors)+1, [], num_ctrl_qubits=len(neighbors),
-                                        ctrl_state='0'*len(neighbors), base_gate=XGate())
+            mc_toffoli = ControlledGate(
+                "mc_toffoli",
+                len(neighbors) + 1,
+                [],
+                num_ctrl_qubits=len(neighbors),
+                ctrl_state="0" * len(neighbors),
+                base_gate=XGate(),
+            )
             circ.append(mc_toffoli, ctrl_qubits + [circ.ancillas[anc_idx]])
 
         # apply an X rotation controlled by the state of the ancilla qubit
-        circ.crx(2*pad_alpha[qubit], circ.ancillas[anc_idx], circ.qubits[qubit])
+        circ.crx(2 * pad_alpha[qubit], circ.ancillas[anc_idx], circ.qubits[qubit])
 
         # apply the same multi-controlled Toffoli to uncompute the ancilla
         if decompose_toffoli > 0:
@@ -109,15 +112,26 @@ def apply_mixer(circ, alpha, init_state, G, barriers,
         if barriers > 1:
             circ.barrier()
 
+
 def apply_phase_separator(circ, gamma, G):
     """
     Apply a parameterized Z-rotation to every qubit
     """
     for qb in G.nodes:
-        circ.rz(2*gamma, qb)
+        circ.rz(2 * gamma, qb)
 
-def gen_qlsa(G, P=1, params=[], init_state=None, barriers=1, decompose_toffoli=1,
-            mixer_order=None, verbose=0, param_lim=None):
+
+def gen_qlsa(
+    G,
+    P=1,
+    params=[],
+    init_state=None,
+    barriers=1,
+    decompose_toffoli=1,
+    mixer_order=None,
+    verbose=0,
+    param_lim=None,
+):
     """
     Generate and return the Quantum Local Search Ansatz (QLSA)
 
@@ -160,18 +174,18 @@ def gen_qlsa(G, P=1, params=[], init_state=None, barriers=1, decompose_toffoli=1
     # Step 1: Jump Start
     # Run an efficient classical approximation algorithm to warm-start the optimization
     if init_state is None:
-        init_state = '0'*nq
+        init_state = "0" * nq
 
     # Step 2: Mixer Initialization
-    qls_circ = QuantumCircuit(nq, name='q')
+    qls_circ = QuantumCircuit(nq, name="q")
 
     # Add an ancilla qubit for implementing the mixer unitaries
-    anc_reg = AncillaRegister(1, 'anc')
+    anc_reg = AncillaRegister(1, "anc")
     qls_circ.add_register(anc_reg)
 
-    #print('Init state:', init_state)
+    # print('Init state:', init_state)
     for qb, bit in enumerate(reversed(init_state)):
-        if bit == '1':
+        if bit == "1":
             qls_circ.x(qb)
     if barriers > 0:
         qls_circ.barrier()
@@ -179,10 +193,10 @@ def gen_qlsa(G, P=1, params=[], init_state=None, barriers=1, decompose_toffoli=1
     # check the number of variational parameters
     num_nonzero = nq - hamming_weight(init_state)
     if param_lim is None:
-        num_params = min(P * (nq + 1), (P+1) * (num_nonzero + 1))
+        num_params = min(P * (nq + 1), (P + 1) * (num_nonzero + 1))
     else:
         num_params = param_lim
-    assert (len(params) == num_params),"Incorrect number of parameters!"
+    assert len(params) == num_params, "Incorrect number of parameters!"
 
     # parse the given parameter list into alphas (for the mixers) and
     # gammas (for the drivers)
@@ -195,7 +209,7 @@ def gen_qlsa(G, P=1, params=[], init_state=None, barriers=1, decompose_toffoli=1
             param_index += 1
             need_new_driver = False
         elif num_params - param_index >= num_nonzero:
-            alpha_list.append(params[param_index:param_index+num_nonzero])
+            alpha_list.append(params[param_index : param_index + num_nonzero])
             param_index += num_nonzero
             if param_index < len(params) and need_new_driver:
                 gamma_list.append(params[param_index])
@@ -207,15 +221,23 @@ def gen_qlsa(G, P=1, params=[], init_state=None, barriers=1, decompose_toffoli=1
 
     if verbose > 0:
         for i in range(len(alpha_list)):
-            print('alpha_{}: {}'.format(i, alpha_list[i]))
+            print("alpha_{}: {}".format(i, alpha_list[i]))
             if i < len(gamma_list):
-                print('gamma_{}: {}'.format(i, gamma_list[i]))
+                print("gamma_{}: {}".format(i, gamma_list[i]))
 
     # Apply alternating layers of mixer and driver unitaries
     for i in range(len(alpha_list)):
         alphas = alpha_list[i]
-        apply_mixer(qls_circ, alphas, init_state, G, barriers,
-                    decompose_toffoli, mixer_order, verbose=verbose)
+        apply_mixer(
+            qls_circ,
+            alphas,
+            init_state,
+            G,
+            barriers,
+            decompose_toffoli,
+            mixer_order,
+            verbose=verbose,
+        )
 
         if barriers == 1:
             qls_circ.barrier()
@@ -228,10 +250,9 @@ def gen_qlsa(G, P=1, params=[], init_state=None, barriers=1, decompose_toffoli=1
                 qls_circ.barrier()
 
     if decompose_toffoli > 1:
-        basis_gates = ['x', 'h', 'cx', 'crx', 'rz', 't', 'tdg', 'u1']
+        basis_gates = ["x", "h", "cx", "crx", "rz", "t", "tdg", "u1"]
         pass_ = Unroller(basis_gates)
         pm = PassManager(pass_)
         qls_circ = pm.run(qls_circ)
 
     return qls_circ
-

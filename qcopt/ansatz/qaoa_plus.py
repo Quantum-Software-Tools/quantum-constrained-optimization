@@ -6,16 +6,16 @@ import numpy as np
 
 
 def construct_qaoa_plus(P, G, params, barriers=False, measure=False):
-    assert (len(params) == 2*P), "Number of parameters should be 2P"
+    assert len(params) == 2 * P, "Number of parameters should be 2P"
 
     nq = len(G.nodes())
-    circ = QuantumCircuit(nq, name='q')
+    circ = QuantumCircuit(nq, name="q")
 
     # Initial state
     circ.h(range(nq))
 
     gammas = [param for i, param in enumerate(params) if i % 2 == 0]
-    betas  = [param for i, param in enumerate(params) if i % 2 == 1]
+    betas = [param for i, param in enumerate(params) if i % 2 == 1]
     for i in range(P):
         # Phase Separator Unitary
         for edge in G.edges():
@@ -45,7 +45,7 @@ def expectation_value(counts, G, Lambda):
         for edge in G.edges():
             q_i, q_j = edge
             rev_bitstr = list(reversed(bitstr))
-            if rev_bitstr[q_i] == '1' and rev_bitstr[q_j] == '1':
+            if rev_bitstr[q_i] == "1" and rev_bitstr[q_j] == "1":
                 temp_energy += -1 * Lambda
 
         energy += count * temp_energy / total_shots
@@ -55,7 +55,7 @@ def expectation_value(counts, G, Lambda):
 
 def solve_mis(P, G, Lambda):
 
-    backend = Aer.get_backend('qasm_simulator')
+    backend = Aer.get_backend("qasm_simulator")
 
     def f(params):
         circ = construct_qaoa_plus(P, G, params, measure=True)
@@ -65,15 +65,15 @@ def solve_mis(P, G, Lambda):
 
         return -1 * expectation_value(counts, G, Lambda)
 
-    init_params = np.random.uniform(low=0.0, high=2*np.pi, size=2*P)
-    out = scipy.optimize.minimize(f, x0=init_params, method='COBYLA')
+    init_params = np.random.uniform(low=0.0, high=2 * np.pi, size=2 * P)
+    out = scipy.optimize.minimize(f, x0=init_params, method="COBYLA")
 
     return out
 
 
 def get_ranked_probs(P, G, params, shots=8192):
     circ = construct_qaoa_plus(P, G, params=params, measure=True)
-    result = execute(circ, backend=Aer.get_backend('qasm_simulator'), shots=shots).result()
+    result = execute(circ, backend=Aer.get_backend("qasm_simulator"), shots=shots).result()
     counts = result.get_counts(circ)
 
     probs = [(bitstr, counts[bitstr] / shots, is_indset(bitstr, G)) for bitstr in counts.keys()]
@@ -85,8 +85,8 @@ def get_ranked_probs(P, G, params, shots=8192):
 def get_approximation_ratio(out, P, G, shots=8192):
     opt_mis = brute_force_search(G)[1]
 
-    circ = construct_qaoa_plus(P, G, params=out['x'], measure=True)
-    result = execute(circ, backend=Aer.get_backend('qasm_simulator'), shots=shots).result()
+    circ = construct_qaoa_plus(P, G, params=out["x"], measure=True)
+    result = execute(circ, backend=Aer.get_backend("qasm_simulator"), shots=shots).result()
     counts = result.get_counts(circ)
 
     # Approximation ratio is computed using ONLY valid independent sets
@@ -97,7 +97,7 @@ def get_approximation_ratio(out, P, G, shots=8192):
             numerator += count * hamming_weight(bitstr) / shots
     ratio = numerator / opt_mis
 
-    #ratio = sum([count * hamming_weight(bitstr) / shots for bitstr, count in counts.items() \
+    # ratio = sum([count * hamming_weight(bitstr) / shots for bitstr, count in counts.items() \
     #             if is_indset(bitstr, G)]) / opt_mis
 
     return ratio
@@ -111,8 +111,12 @@ def top_strs(counts, G, top=5):
 
     for i in range(top):
         ratio = hamming_weight(probs[i][0]) * probs[i][1] / opt_mis
-        print('{} ({}) -> {:.4f}%, Ratio = {:.4f}, Is MIS? {}'.format(probs[i][0], hamming_weight(probs[i][0]),
-                                                 probs[i][1] * 100, ratio, is_indset(probs[i][0], G)))
-
-
-
+        print(
+            "{} ({}) -> {:.4f}%, Ratio = {:.4f}, Is MIS? {}".format(
+                probs[i][0],
+                hamming_weight(probs[i][0]),
+                probs[i][1] * 100,
+                ratio,
+                is_indset(probs[i][0], G),
+            )
+        )

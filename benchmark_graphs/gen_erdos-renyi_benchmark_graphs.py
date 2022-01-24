@@ -3,13 +3,14 @@ import glob
 import networkx as nx
 
 import sys
-sys.path.append('../')
+
+sys.path.append("../")
 
 from utils.graph_funcs import graph_from_file
 
 
 def is_unique(folder, G):
-    all_graphs = glob.glob(folder+'/*')
+    all_graphs = glob.glob(folder + "/*")
 
     for graph in all_graphs:
         cur_G = graph_from_file(graph)
@@ -18,13 +19,14 @@ def is_unique(folder, G):
 
     return True
 
-dirs = glob.glob('N20_p*')
+
+dirs = glob.glob("N20_p*")
 
 for folder in dirs:
     print(folder)
-    n = int(folder.split('_')[0][1:])
-    p = int(folder.split('_')[1][1:]) / 100
-    print('Nodes: {}, probability: {}'.format(n, p))
+    n = int(folder.split("_")[0][1:])
+    p = int(folder.split("_")[1][1:]) / 100
+    print("Nodes: {}, probability: {}".format(n, p))
 
     count = 0
     while count < 30:
@@ -33,9 +35,7 @@ for folder in dirs:
             count += 1
             edges = list(G.edges())
 
-            with open(folder+'/G{}.txt'.format(count), 'w') as fn:
-                edgestr = ''.join(['{}, '.format(e) for e in edges])
-                edgestr = edgestr.strip(', ')
+            with open(folder + "/G{}.txt".format(count), "w") as fn:
+                edgestr = "".join(["{}, ".format(e) for e in edges])
+                edgestr = edgestr.strip(", ")
                 fn.write(edgestr)
-
-
