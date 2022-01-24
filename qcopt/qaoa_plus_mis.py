@@ -39,36 +39,60 @@ def expectation_value(counts, G, Lambda):
 
     return energy
 
+
 def get_ranked_probs(P, G, params, shots=8192, threads=0):
     circ = qcopt.ansatz.qaoa_plus.construct_qaoa_plus(P, G, params=params, measure=True)
-    result = qiskit.execute(circ, backend=Aer.get_backend("aer_simulator", max_parallel_threads=threads), shots=shots).result()
+    result = qiskit.execute(
+        circ, backend=Aer.get_backend("aer_simulator", max_parallel_threads=threads), shots=shots
+    ).result()
     counts = result.get_counts(circ)
 
-    probs = [(bitstr, counts[bitstr] / shots, qcopt.utils.graph_funcs.is_indset(bitstr, G)) for bitstr in counts.keys()]
+    probs = [
+        (bitstr, counts[bitstr] / shots, qcopt.utils.graph_funcs.is_indset(bitstr, G))
+        for bitstr in counts.keys()
+    ]
     probs = sorted(probs, key=lambda p: p[1], reverse=True)
 
     return probs
 
 
-def get_approximation_ratio(out, P, G, shots=8192, threads=0):
-    opt_mis = qcopt.utils.helper_funcs.brute_force_search(G)[1]
+def get_approximation_ratio(out, P, G, brute_force_output=None, shots=8192, threads=0):
+    if brute_force_output:
+        with open(brute_force_output, "r") as outfile:
+            for i, line in enumerate(outfile):
+                if i == 1:
+                    opt_mis = int(line.split()[-1])
+    else:
+        print("No brute force file exists, finding now...")
+        opt_mis = qcopt.utils.helper_funcs.brute_force_search(G)[1]
 
     circ = qcopt.ansatz.qaoa_plus.construct_qaoa_plus(P, G, params=out["x"], measure=True)
-    result = qiskit.execute(circ, backend=Aer.get_backend("aer_simulator", max_parallel_threads=threads), shots=shots).result()
+    result = qiskit.execute(
+        circ, backend=Aer.get_backend("aer_simulator", max_parallel_threads=threads), shots=shots
+    ).result()
     counts = result.get_counts(circ)
 
+    # Equation 8
     # Approximation ratio is computed using ONLY valid independent sets
     # E(gamma, beta) = SUM_bitstrs { (bitstr_counts / total_shots) * hamming_weight(bitstr) } / opt_mis
     numerator = 0
     for bitstr, count in counts.items():
         if qcopt.utils.graph_funcs.is_indset(bitstr, G):
             numerator += count * qcopt.utils.helper_funcs.hamming_weight(bitstr) / shots
-    ratio = numerator / opt_mis
+    ratio_eqn8 = numerator / opt_mis
 
-    # ratio = sum([count * hamming_weight(bitstr) / shots for bitstr, count in counts.items() \
-    #             if is_indset(bitstr, G)]) / opt_mis
+    sorted_counts = sorted(
+        [(bitstr, counts[bitstr] / shots) for bitstr in counts.keys()],
+        key=lambda p: p[1],
+        reverse=True,
+    )
+    most_likely_ratio = 0
+    for bitstr, prob in sorted_counts:
+        if qcopt.utils.graph_funcs.is_indset(bitstr, G):
+            most_likely_ratio = qcopt.utils.helper_funcs.hamming_weight(bitstr) / opt_mis
+            break
 
-    return ratio
+    return ratio_eqn8, most_likely_ratio
 
 
 def top_strs(counts, G, top=5):

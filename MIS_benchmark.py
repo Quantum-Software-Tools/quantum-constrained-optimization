@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Use the benchmark graphs to test ability of the different ansatzes
 to solve the MIS problem
