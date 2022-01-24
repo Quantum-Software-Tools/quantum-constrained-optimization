@@ -1,23 +1,40 @@
+#!/usr/bin/env python
 import glob
 import networkx as nx
 
-dirs = []
-for n in range(26, 27):
-    temp_dirs = glob.glob('N{}*'.format(n))
-    dirs.extend(temp_dirs)
-print('Dirs:', dirs)
+import sys
+sys.path.append('../')
+
+from utils.graph_funcs import graph_from_file
+
+
+def is_unique(folder, G):
+    all_graphs = glob.glob(folder+'/*')
+
+    for graph in all_graphs:
+        cur_G = graph_from_file(graph)
+        if nx.is_isomorphic(G, cur_G):
+            return False
+
+    return True
+
+dirs = glob.glob('N20_d3_graphs')
 
 for folder in dirs:
+    print(folder)
     n = int(folder.split('_')[0][1:])
     d = int(folder.split('_')[1][1:])
     print('Nodes: {}, degree: {}'.format(n, d))
 
-    for j in range(15):
+    count = 0
+    while count < 30:
         G = nx.random_regular_graph(d, n)
-        edges = list(G.edges())
+        if nx.is_connected(G) and is_unique(folder, G):
+            count += 1
+            edges = list(G.edges())
 
-        with open(folder+'/G{}.txt'.format(j+1), 'w') as fn:
-            edgestr = ''.join(['{}, '.format(e) for e in edges])
-            edgestr = edgestr.strip(', ')
-            fn.write(edgestr)
+            with open(folder+'/G{}.txt'.format(count), 'w') as fn:
+                edgestr = ''.join(['{}, '.format(e) for e in edges])
+                edgestr = edgestr.strip(', ')
+                fn.write(edgestr)
 

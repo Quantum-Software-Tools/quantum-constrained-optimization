@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import glob
 import networkx as nx
 
@@ -17,7 +18,7 @@ def is_unique(folder, G):
 
     return True
 
-dirs = glob.glob('N14_p*')
+dirs = glob.glob('N20_p*')
 
 for folder in dirs:
     print(folder)
@@ -26,7 +27,7 @@ for folder in dirs:
     print('Nodes: {}, probability: {}'.format(n, p))
 
     count = 0
-    while count < 25:
+    while count < 30:
         G = nx.generators.random_graphs.erdos_renyi_graph(n, p)
         if nx.is_connected(G) and is_unique(folder, G):
             count += 1
