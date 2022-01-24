@@ -1,6 +1,7 @@
 from . import dqva_mis
 from . import limited_dqva_mis
-from . import qaoa_mis
+from . import qaoansatz_mis
+from . import qaoa_plus_mis
 from .ansatz import dqva
 from .ansatz import dqv_ancilla_ansatz
 from .ansatz import qaoa
@@ -13,7 +14,7 @@ from .utils import helper_funcs
 __all__ = [
     "dqva_mis",
     "limited_dqva_mis",
-    "qaoa_mis",
+    "qaoansatz_mis",
     "dqva",
     "dqv_ancilla_ansatz",
     "qaoa",
