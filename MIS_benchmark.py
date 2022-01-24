@@ -4,9 +4,10 @@ to solve the MIS problem
 """
 import os, sys, argparse, glob
 import numpy as np
-import mis
 import pickle, random
-from utils.graph_funcs import graph_from_file, is_indset
+
+import qcopt
+
 
 def get_hw_1_strs(nq):
     bitstrs = []
@@ -92,7 +93,7 @@ def main():
         if not os.path.isdir(cur_savepath):
             os.mkdir(cur_savepath)
 
-        G = graph_from_file(graphfn)
+        G = qcopt.utils.graph_funcs.graph_from_file(graphfn)
         print(G.edges())
         nq = len(G.nodes)
         if 'HotStart' in args.alg:
@@ -106,7 +107,7 @@ def main():
             while len(init_states) < 3:
                 temp_str = random.choice(all_bitstrs)
                 # Ensure the randomly select bitstr is a viable IS
-                if not is_indset(temp_str, G):
+                if not qcopt.utils.graph_funcs.is_indset(temp_str, G):
                     continue
                 # Make sure it is not already added to the list
                 overlap = False
@@ -141,26 +142,24 @@ def main():
 
         for rep in rep_range:
             if args.alg == 'qaoa' or args.alg == 'qaoaWStart':
-                out = mis.solve_mis_qaoa(init_state, G, P=args.P, m=args.m,
+                out = qcopt.qaoa_mis.solve_mis(init_state, G, P=args.P, m=args.m,
                                           sim='aer', shots=args.shots,
                                           verbose=args.v, threads=args.threads)
             elif args.alg == 'dqva':
-                out = mis.solve_mis_dqva(init_state, G, P=args.P, m=args.m,
+                out = qcopt.dqva_mis.solve_mis(init_state, G, P=args.P, m=args.m,
                                          sim='aer', shots=args.shots,
                                          verbose=args.v, threads=args.threads)
             elif args.alg == 'qls':
-                out = mis.solve_mis_qls(init_state, G, P=args.P, m=args.m,
+                out = qcopt.limited_dqva_mis.solve_mis(init_state, G, P=args.P, m=args.m,
                                           sim='aer', shots=args.shots,
                                           verbose=args.v, param_lim=args.plim,
                                           threads=args.threads)
-            elif args.alg == 'cut_dqva':
-                out = mis.solve_mis_cut_dqva()
 
             # We can also hot start the optimization to escape local minima
             elif args.alg == 'qaoaHotStart':
                 out_results = []
                 for i, init_state in enumerate(init_states):
-                    out = mis.solve_mis_qaoa(init_state, G, P=args.P, m=args.m,
+                    out = qcopt.qaoa_mis.solve_mis(init_state, G, P=args.P, m=args.m,
                                               sim=args.sim, shots=args.shots,
                                               verbose=args.v)
                     out_results.append((i+1, out))
@@ -168,7 +167,7 @@ def main():
             elif args.alg == 'dqvaHotStart':
                 out_results = []
                 for i, init_state in enumerate(init_states):
-                    out = mis.solve_mis_dqva(init_state, G, P=args.P, m=args.m,
+                    out = qcopt.dqva_mis.solve_mis(init_state, G, P=args.P, m=args.m,
                                               sim=args.sim, shots=args.shots,
                                               verbose=args.v)
                     out_results.append((i+1, out))
@@ -176,7 +175,7 @@ def main():
             elif args.alg == 'qlsHotStart':
                 out_results = []
                 for i, init_state in enumerate(init_states):
-                    out = mis.solve_mis_qls(init_state, G, P=args.P, m=args.m,
+                    out = qcopt.limited_dqva_mis.solve_mis(init_state, G, P=args.P, m=args.m,
                                             sim=args.sim, shots=args.shots,
                                             verbose=args.v, param_lim=args.plim)
                     out_results.append((i+1, out))

@@ -9,13 +9,12 @@ import qiskit
 from qiskit import Aer
 from qiskit.quantum_info import Statevector
 
-from qcopt.ansatz import qlsa
+from qcopt.ansatz import qaoa
 from qcopt.utils import graph_funcs, helper_funcs
 
 
 def solve_mis(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
-                   cutoff=1, sim='aer', shots=8192, verbose=0,
-                   threads=0):
+              cutoff=1, sim='aer', shots=8192, verbose=0, threads=0):
     """
     Find the MIS of G using a Quantum Alternating Operator Ansatz (QAOA), the
     structure of the driver and mixer unitaries is the same as that used by
@@ -54,13 +53,13 @@ def solve_mis(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
             circ.measure_all()
 
         # Compute the cost function
-        result = execute(circ, backend=backend, shots=shots).result()
+        result = qiskit.execute(circ, backend=backend, shots=shots).result()
         if sim == 'statevector':
             statevector = Statevector(result.get_statevector(circ))
-            probs = strip_ancillas(statevector.probabilities_dict(decimals=5), circ)
+            probs = helper_funcs.strip_ancillas(statevector.probabilities_dict(decimals=5), circ)
         elif sim == 'qasm' or sim == 'aer':
             counts = result.get_counts(circ)
-            probs = strip_ancillas({key: val/shots for key, val in counts.items()}, circ)
+            probs = helper_funcs.strip_ancillas({key: val/shots for key, val in counts.items()}, circ)
 
         avg_cost = 0
         for sample in probs.keys():
@@ -83,7 +82,7 @@ def solve_mis(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
     for mixer_round in range(1, m+1):
         mixer_history = []
         inner_round = 1
-        new_hamming_weight = hamming_weight(cur_init_state)
+        new_hamming_weight = helper_funcs.hamming_weight(cur_init_state)
 
         # Attempt to improve the Hamming weight until no further improvements can be made
         # QAOA only uses a single inner round
@@ -117,13 +116,13 @@ def solve_mis(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
             if sim == 'qasm' or sim == 'aer':
                 opt_circ.measure_all()
 
-            result = execute(opt_circ, backend=backend, shots=shots).result()
+            result = qiskit.execute(opt_circ, backend=backend, shots=shots).result()
             if sim == 'statevector':
                 statevector = Statevector(result.get_statevector(opt_circ))
-                probs = strip_ancillas(statevector.probabilities_dict(decimals=5), opt_circ)
+                probs = helper_funcs.strip_ancillas(statevector.probabilities_dict(decimals=5), opt_circ)
             elif sim == 'qasm' or sim == 'aer':
                 counts = result.get_counts(opt_circ)
-                probs = strip_ancillas({key: val/shots for key, val in counts.items()}, opt_circ)
+                probs = helper_funcs.strip_ancillas({key: val/shots for key, val in counts.items()}, opt_circ)
 
             # Select the top [cutoff] bitstrings
             top_counts = sorted([(key, val) for key, val in probs.items() if val > threshold],
@@ -131,11 +130,11 @@ def solve_mis(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
 
             # Check if we have improved the Hamming weight
             #     NOTE: hamming_weight(W) = 0
-            best_hamming_weight = hamming_weight(best_indset)
+            best_hamming_weight = helper_funcs.hamming_weight(best_indset)
             better_strs = []
             for bitstr, prob in top_counts:
-                this_hamming = hamming_weight(bitstr)
-                if is_indset(bitstr, G) and this_hamming > best_hamming_weight:
+                this_hamming = helper_funcs.hamming_weight(bitstr)
+                if graph_funcs.is_indset(bitstr, G) and this_hamming > best_hamming_weight:
                     better_strs.append((bitstr, this_hamming))
             better_strs = sorted(better_strs, key=lambda t: t[1], reverse=True)
 

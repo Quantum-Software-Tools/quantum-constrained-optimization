@@ -50,7 +50,7 @@ def solve_mis(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
     # This function will be what scipy.minimize optimizes
     def f(params):
         # Generate a circuit
-        circ = qls_ansatz.gen_qlsa(G, P=P, params=params,
+        circ = qlsa.gen_qlsa(G, P=P, params=params,
                      init_state=cur_init_state, barriers=0, decompose_toffoli=1,
                     mixer_order=cur_permutation, verbose=0, param_lim=param_lim)
 
@@ -58,7 +58,7 @@ def solve_mis(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
             circ.measure_all()
 
         # Compute the cost function
-        result = execute(circ, backend=backend, shots=shots).result()
+        result = qiskit.execute(circ, backend=backend, shots=shots).result()
         if sim == 'statevector':
             statevector = Statevector(result.get_statevector(circ))
             probs = helper_funcs.strip_ancillas(statevector.probabilities_dict(decimals=5), circ)
@@ -114,7 +114,7 @@ def solve_mis(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
             print('\tOptimal cost:', opt_cost)
 
             # Get the results of the optimized circuit
-            opt_circ = qls_ansatz.gen_qlsa(G, P=P, params=opt_params,
+            opt_circ = qlsa.gen_qlsa(G, P=P, params=opt_params,
                                init_state=cur_init_state, barriers=0,
                                decompose_toffoli=1, mixer_order=cur_permutation,
                                verbose=0, param_lim=param_lim)
@@ -122,7 +122,7 @@ def solve_mis(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
             if sim == 'qasm' or sim == 'aer':
                 opt_circ.measure_all()
 
-            result = execute(opt_circ, backend=backend, shots=shots).result()
+            result = qiskit.execute(opt_circ, backend=backend, shots=shots).result()
             if sim == 'statevector':
                 statevector = Statevector(result.get_statevector(opt_circ))
                 probs = helper_funcs.strip_ancillas(statevector.probabilities_dict(decimals=5), opt_circ)
