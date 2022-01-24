@@ -1,6 +1,6 @@
 from qiskit import QuantumCircuit, Aer, execute
-from utils.helper_funcs import *
-from utils.graph_funcs import *
+from qcopt.utils.helper_funcs import *
+from qcopt.utils.graph_funcs import *
 import scipy
 import numpy as np
 

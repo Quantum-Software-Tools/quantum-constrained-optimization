@@ -4,14 +4,13 @@
 The functions in the file are used to generate the Dynamic
 Quantum Variational Ansatz (DQVA)
 """
-import numpy as np
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, AncillaRegister
 from qiskit.circuit import ControlledGate
-from qiskit.circuit.library.standard_gates import RXGate
+from qiskit.circuit.library.standard_gates import XGate
 from qiskit.transpiler.passes import Unroller
 from qiskit.transpiler import PassManager
-from utils.graph_funcs import *
-from utils.helper_funcs import *
+from qcopt.utils.graph_funcs import *
+from qcopt.utils.helper_funcs import *
 
 def apply_mixer(circ, alpha, init_state, G, barriers,
                 decompose_toffoli, mixer_order, verbose=0):
@@ -33,9 +32,9 @@ def apply_mixer(circ, alpha, init_state, G, barriers,
     barriers : int
         An integer from 0 to 2, with 0 having no barriers and 2 having the most
     decompose_toffoli : int
-        An integer from 0 to 2, selecting 0 will apply custom open-controlled
+        An integer from 0 to 2, selecting 0 with apply custom open-controlled
         toffoli gates to the ansatz. 1 will apply equivalent gates but using
-        instead using X-gates and regular-controlled toffolis. 2 unrolls these gates
+        instead X-gates and regular-controlled toffolis. 2 unrolls these gates
         to basis gates (but not relevant to this function).
         WARNING Qiskit cannot simulate circuits with decompose_toffoli=0
     mixer_order : list[int]
@@ -71,6 +70,7 @@ def apply_mixer(circ, alpha, init_state, G, barriers,
             continue
 
         neighbors = list(G.neighbors(qubit))
+        anc_idx = 0
 
         if verbose > 0:
             print('qubit:', qubit, 'num_qubits =', len(circ.qubits),
@@ -81,25 +81,31 @@ def apply_mixer(circ, alpha, init_state, G, barriers,
         # Instead, wrap a regular toffoli with X-gates
         ctrl_qubits = [circ.qubits[i] for i in neighbors]
         if decompose_toffoli > 0:
-            # Implement the multi-controlled Rx rotation using the decomposition given by
-            # Lemma 5.1 in Barenco et. al. (https://arxiv.org/pdf/quant-ph/9503016.pdf)
+            # apply the multi-controlled Toffoli, targetting the ancilla qubit
             for ctrl in ctrl_qubits:
                 circ.x(ctrl)
-            circ.rz(np.pi / 2, circ.qubits[qubit])
-            circ.ry(pad_alpha[qubit], circ.qubits[qubit])
-            circ.mcx(ctrl_qubits, circ.qubits[qubit])
-            circ.ry(-1 * pad_alpha[qubit], circ.qubits[qubit])
-            circ.mcx(ctrl_qubits, circ.qubits[qubit])
-            circ.rz(-1 * np.pi / 2, circ.qubits[qubit])
+            circ.mcx(ctrl_qubits, circ.ancillas[anc_idx])
             for ctrl in ctrl_qubits:
                 circ.x(ctrl)
         else:
-            mcrx = ControlledGate('mcrx', len(neighbors)+1, [2 * pad_alpha[qubit]],
-                                  num_ctrl_qubits=len(neighbors),
-                                  ctrl_state='0'*len(neighbors),
-                                  base_gate=RXGate(2 * pad_alpha[qubit]))
-            circ.append(mcrx, ctrl_qubits + [circ.qubits[qubit]])
+            mc_toffoli = ControlledGate('mc_toffoli', len(neighbors)+1, [],
+                                        num_ctrl_qubits=len(neighbors),
+                                        ctrl_state='0'*len(neighbors),
+                                        base_gate=XGate())
+            circ.append(mc_toffoli, ctrl_qubits + [circ.ancillas[anc_idx]])
 
+        # apply an X rotation controlled by the state of the ancilla qubit
+        circ.crx(2*pad_alpha[qubit], circ.ancillas[anc_idx], circ.qubits[qubit])
+
+        # apply the same multi-controlled Toffoli to uncompute the ancilla
+        if decompose_toffoli > 0:
+            for ctrl in ctrl_qubits:
+                circ.x(ctrl)
+            circ.mcx(ctrl_qubits, circ.ancillas[anc_idx])
+            for ctrl in ctrl_qubits:
+                circ.x(ctrl)
+        else:
+            circ.append(mc_toffoli, ctrl_qubits + [circ.ancillas[anc_idx]])
 
         if barriers > 1:
             circ.barrier()
@@ -126,6 +132,10 @@ def gen_dqva(G, P=1, params=[], init_state=None, barriers=1, decompose_toffoli=1
     # Step 2: Mixer Initialization
     # Select any one of the initial strings and apply two mixing unitaries separated by the phase separator unitary
     dqva_circ = QuantumCircuit(nq, name='q')
+
+    # Add an ancilla qubit for implementing the mixer unitaries
+    anc_reg = AncillaRegister(1, 'anc')
+    dqva_circ.add_register(anc_reg)
 
     #print('Init state:', init_state)
     for qb, bit in enumerate(reversed(init_state)):

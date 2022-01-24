@@ -367,7 +367,7 @@ def solve_mis_dqva(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
     if sim == 'statevector' or sim == 'qasm':
         backend = Aer.get_backend(sim+'_simulator', max_parallel_threads=threads)
     elif sim == 'aer':
-        backend = Aer.get_backend(name='aer_simulator', method='statevector',
+        backend = Aer.get_backend(name='aer_simulator', method='automatic',
                                       max_parallel_threads=threads)
     elif sim == 'cloud':
         raise Exception('NOT YET IMPLEMENTED!')
@@ -476,8 +476,9 @@ def solve_mis_dqva(init_state, G, P=1, m=1, mixer_order=None, threshold=1e-5,
 
             # Save current results to history
             inner_history = {'mixer_round':mixer_round, 'inner_round':inner_round,
-                             'cost':opt_cost, 'init_state':cur_init_state,
-                             'mixer_order':copy.copy(cur_permutation), 'num_params':num_params}
+                    'cost':opt_cost, 'function_evals':out['nfev'],
+                    'init_state':cur_init_state, 'mixer_order':copy.copy(cur_permutation),
+                    'num_params':num_params}
             mixer_history.append(inner_history)
 
             # If no improvement was made, break and go to next mixer round

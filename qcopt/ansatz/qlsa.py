@@ -9,8 +9,8 @@ from qiskit.circuit import ControlledGate
 from qiskit.circuit.library.standard_gates import XGate
 from qiskit.transpiler.passes import Unroller
 from qiskit.transpiler import PassManager
-from utils.graph_funcs import *
-from utils.helper_funcs import *
+from qcopt.utils.graph_funcs import *
+from qcopt.utils.helper_funcs import *
 
 def apply_mixer(circ, alpha, init_state, G, barriers,
                 decompose_toffoli, mixer_order, verbose=0):
