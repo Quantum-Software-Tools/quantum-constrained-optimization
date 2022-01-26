@@ -129,7 +129,6 @@ def gen_dqva(
     # Select any one of the initial strings and apply two mixing unitaries separated by the phase separator unitary
     dqva_circ = QuantumCircuit(nq, name="q")
 
-    # print('Init state:', init_state)
     for qb, bit in enumerate(reversed(init_state)):
         if bit == "1":
             dqva_circ.x(qb)
@@ -187,7 +186,7 @@ def gen_dqva(
 
     if decompose_toffoli > 1:
         # basis_gates = ['x', 'cx', 'barrier', 'crx', 'tdg', 't', 'rz', 'h']
-        basis_gates = ["x", "h", "cx", "crx", "rz", "t", "tdg", "u1"]
+        basis_gates = ["x", "h", "cx", "crx", "rz", "t", "tdg", "u1", "u2", "u3"]
         pass_ = Unroller(basis_gates)
         pm = PassManager(pass_)
         dqva_circ = pm.run(dqva_circ)

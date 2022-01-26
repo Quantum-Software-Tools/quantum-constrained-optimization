@@ -10,19 +10,18 @@ Algorithm in the structure of the quantum circuits it uses. In this file, all
 mentions of "qaoa" actually refer to the QAO-Ansatz.
 """
 import numpy as np
-from qiskit import QuantumCircuit, AncillaRegister
+from qiskit import QuantumCircuit
 from qiskit.circuit import ControlledGate
-from qiskit.circuit.library.standard_gates import XGate
+from qiskit.circuit.library.standard_gates import RXGate
 from qiskit.transpiler.passes import Unroller
 from qiskit.transpiler import PassManager
-from qcopt.utils.graph_funcs import *
-from qcopt.utils.helper_funcs import *
+from qcopt.utils import graph_funcs
+from qcopt.utils import helper_funcs
 
 
-def apply_mixer(circ, G, beta, anc_idx, barriers, decompose_toffoli, mixer_order, verbose=0):
+def apply_mixer(circ, G, beta, barriers, decompose_toffoli, mixer_order, verbose=0):
 
-    # apply mixers U_M(beta)
-    # Randomly permute the order of the mixing unitaries
+    # apply mixers U_M(beta) according to the order given in mixer_order
     if mixer_order is None:
         mixer_order = list(G.nodes)
     if verbose > 0:
@@ -36,38 +35,30 @@ def apply_mixer(circ, G, beta, anc_idx, barriers, decompose_toffoli, mixer_order
         # Construct a multi-controlled Toffoli gate, with open-controls on q's neighbors
         # Qiskit has bugs when attempting to simulate custom controlled gates.
         # Instead, wrap a regular toffoli with X-gates
-
-        # Apply the multi-controlled Toffoli, targetting the ancilla qubit
         ctrl_qubits = [circ.qubits[i] for i in neighbors]
         if decompose_toffoli > 0:
+            # Implement the multi-controlled Rx rotation using the decomposition given by
+            # Lemma 5.1 in Barenco et. al. (https://arxiv.org/pdf/quant-ph/9503016.pdf)
             for ctrl in ctrl_qubits:
                 circ.x(ctrl)
-            circ.mcx(ctrl_qubits, circ.ancillas[anc_idx])
+            circ.rz(np.pi / 2, circ.qubits[qubit])
+            circ.ry(beta, circ.qubits[qubit])
+            circ.mcx(ctrl_qubits, circ.qubits[qubit])
+            circ.ry(-1 * beta, circ.qubits[qubit])
+            circ.mcx(ctrl_qubits, circ.qubits[qubit])
+            circ.rz(-1 * np.pi / 2, circ.qubits[qubit])
             for ctrl in ctrl_qubits:
                 circ.x(ctrl)
         else:
-            mc_toffoli = ControlledGate(
-                "mc_toffoli",
+            mcrx = ControlledGate(
+                "mcrx",
                 len(neighbors) + 1,
-                [],
+                [2 * beta],
                 num_ctrl_qubits=len(neighbors),
                 ctrl_state="0" * len(neighbors),
-                base_gate=XGate(),
+                base_gate=RXGate(2 * beta),
             )
-            circ.append(mc_toffoli, ctrl_qubits + [circ.ancillas[anc_idx]])
-
-        # apply an X rotation controlled by the state of the ancilla qubit
-        circ.crx(2 * beta, circ.ancillas[anc_idx], circ.qubits[qubit])
-
-        # apply the same multi-controlled Toffoli to uncompute the ancilla
-        if decompose_toffoli > 0:
-            for ctrl in ctrl_qubits:
-                circ.x(ctrl)
-            circ.mcx(ctrl_qubits, circ.ancillas[anc_idx])
-            for ctrl in ctrl_qubits:
-                circ.x(ctrl)
-        else:
-            circ.append(mc_toffoli, ctrl_qubits + [circ.ancillas[anc_idx]])
+            circ.append(mcrx, ctrl_qubits + [circ.qubits[qubit]])
 
         if barriers > 1:
             circ.barrier()
@@ -92,16 +83,13 @@ def gen_qaoa(
     # Step 2: Mixer Initialization
     qaoa_circ = QuantumCircuit(nq, name="q")
 
-    # Add an ancilla qubit for implementing the mixer unitaries
-    anc_reg = AncillaRegister(1, "anc")
-    qaoa_circ.add_register(anc_reg)
-
     if init_state == "W":
         # Prepare the |W> initial state
+        # TODO: change this to improve simulation efficiency
         W_vector = np.zeros(2 ** nq)
         for i in range(len(W_vector)):
             bitstr = "{:0{}b}".format(i, nq)
-            if hamming_weight(bitstr) == 1:
+            if helper_funcs.hamming_weight(bitstr) == 1:
                 W_vector[i] = 1 / np.sqrt(nq)
         qaoa_circ.initialize(W_vector, qaoa_circ.qubits[:-1])
     else:
@@ -121,9 +109,8 @@ def gen_qaoa(
         print("gammas:", gammas)
 
     for beta, gamma in zip(betas, gammas):
-        anc_idx = 0
         apply_mixer(
-            qaoa_circ, G, beta, anc_idx, barriers, decompose_toffoli, mixer_order, verbose=verbose
+            qaoa_circ, G, beta, barriers, decompose_toffoli, mixer_order, verbose=verbose
         )
         if barriers > 0:
             qaoa_circ.barrier()
