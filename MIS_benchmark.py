@@ -239,13 +239,13 @@ def main():
                         pickle.dump({"graph": graphfn, "out": result[1]}, pf)
 
             else:
-                if args.plim is None:
-                    savename = "{}_{}_P{}_{}_rep{}.pickle".format(
-                        graphname, args.alg, args.P, args.sim, rep
-                    )
-                else:
+                if args.plim:
                     savename = "{}_{}_lim{}_{}_rep{}.pickle".format(
                         graphname, args.alg, args.plim, args.sim, rep
+                    )
+                else:
+                    savename = "{}_{}_P{}_{}_rep{}.pickle".format(
+                        graphname, args.alg, args.P, args.sim, rep
                     )
 
                 with open(cur_savepath + savename, "ab") as pf:

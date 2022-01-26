@@ -48,29 +48,28 @@ def main():
         G = qcopt.utils.graph_funcs.graph_from_file(graphfn)
         print(graphname, G.edges())
 
-        data_list = []
         for rep in range(1, args.reps + 1):
+            data_list = []
             for Lambda in np.arange(0.1, 10, 0.7):
-                data_dict = {"lambda": Lambda, "graph": graphfn}
                 out = qcopt.qaoa_plus_mis.solve_mis(args.P, G, Lambda, threads=args.threads)
-                data_dict["fevals"] = out["nfev"]
-                data_dict["opt_params"] = out["x"]
 
                 # Compute the approximation ratio by summing over only valid ISs and by taking the most likely IS
                 ratios = qcopt.qaoa_plus_mis.get_approximation_ratio(
                     out,
                     args.P,
                     G,
-                    brute_force_output=None,  # f"{DQVAROOT}benchmark_graphs/brute_force_outputs/{graph_type}/{graphname}_brute_force.out",
+                    brute_force_output=f"{DQVAROOT}benchmark_graphs/brute_force_outputs/{graph_type}/{graphname}_brute_force.out",
                     threads=args.threads,
                 )
-                data_dict["ratios"] = ratios
 
-                # Sort the output bitstrings by their probabilities
-                ranked_probs = qcopt.qaoa_plus_mis.get_ranked_probs(
-                    args.P, G, out["x"], threads=args.threads
-                )
-                data_dict["ranked_probs"] = ranked_probs
+                data_dict = {
+                        "lambda": Lambda,
+                        "graph": graphfn,
+                        "P": args.P,
+                        "function_evals": out["nfev"],
+                        "opt_params": out["x"],
+                        "ratios": ratios,
+                }
 
                 print(f"lambda: {Lambda:.3f}, ratios = {ratios[0]:.3f}, {ratios[1]:.3f}")
 
