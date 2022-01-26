@@ -5,6 +5,7 @@ from . import qaoa_plus_mis
 from .ansatz import dqva
 from .ansatz import dqv_ancilla_ansatz
 from .ansatz import qaoa
+from .ansatz import qao_ancilla_ansatz
 from .ansatz import qaoa_plus
 from .ansatz import qlsa
 from .ansatz import qls_ancilla_ansatz
@@ -18,6 +19,7 @@ __all__ = [
     "dqva",
     "dqv_ancilla_ansatz",
     "qaoa",
+    "qao_ancilla_ansatz",
     "qaoa_plus",
     "qlsa",
     "qls_ancilla_ansatz",
