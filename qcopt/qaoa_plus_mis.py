@@ -6,17 +6,18 @@ from qiskit import Aer
 import qcopt
 
 
-def solve_mis(P, G, Lambda, threads=0):
+def solve_mis(P, G, Lambda, shots=1024, threads=0):
 
-    backend = Aer.get_backend("aer_simulator", max_parallel_threads=threads)
+    backend = Aer.get_backend("aer_simulator_statevector", max_parallel_threads=threads)
 
     def f(params):
-        circ = qcopt.ansatz.qaoa_plus.construct_qaoa_plus(P, G, params, measure=True)
+        circ = qcopt.ansatz.qaoa_plus.construct_qaoa_plus(P, G, params, measure=False)
+        circ.save_statevector()
 
-        result = qiskit.execute(circ, backend=backend, shots=8192).result()
-        counts = result.get_counts(circ)
+        result = qiskit.execute(circ, backend=backend, shots=shots).result()
+        probs = qiskit.quantum_info.Statevector(result.get_statevector(circ)).probabilities_dict(decimals=5)
 
-        return -1 * expectation_value(counts, G, Lambda)
+        return -1 * expectation_value(probs, G, Lambda)
 
     init_params = np.random.uniform(low=0.0, high=2 * np.pi, size=2 * P)
     out = minimize(f, x0=init_params, method="COBYLA")
@@ -24,10 +25,9 @@ def solve_mis(P, G, Lambda, threads=0):
     return out
 
 
-def expectation_value(counts, G, Lambda):
-    total_shots = sum(counts.values())
+def expectation_value(probs, G, Lambda):
     energy = 0
-    for bitstr, count in counts.items():
+    for bitstr, probability in probs.items():
         temp_energy = qcopt.helper_funcs.hamming_weight(bitstr)
         for edge in G.edges():
             q_i, q_j = edge
@@ -35,7 +35,7 @@ def expectation_value(counts, G, Lambda):
             if rev_bitstr[q_i] == "1" and rev_bitstr[q_j] == "1":
                 temp_energy += -1 * Lambda
 
-        energy += count * temp_energy / total_shots
+        energy += probability * temp_energy
 
     return energy
 
