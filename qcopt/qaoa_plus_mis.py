@@ -40,20 +40,20 @@ def expectation_value(probs, G, Lambda):
     return energy
 
 
-def get_ranked_probs(P, G, params, shots=8192, threads=0):
-    circ = qcopt.ansatz.qaoa_plus.construct_qaoa_plus(P, G, params=params, measure=True)
-    result = qiskit.execute(
-        circ, backend=Aer.get_backend("aer_simulator", max_parallel_threads=threads), shots=shots
-    ).result()
-    counts = result.get_counts(circ)
+def get_ranked_probs(P, G, params, threads=0):
+    backend = Aer.get_backend("aer_simulator_statevector", max_parallel_threads=threads)
+    circ = qcopt.ansatz.qaoa_plus.construct_qaoa_plus(P, G, params=params, measure=False)
+    circ.save_statevector()
+    result = qiskit.execute(circ, backend=backend).result()
+    probs = qiskit.quantum_info.Statevector(result.get_statevector(circ)).probabilities_dict(decimals=5)
 
-    probs = [
-        (bitstr, counts[bitstr] / shots, qcopt.utils.graph_funcs.is_indset(bitstr, G))
-        for bitstr in counts.keys()
+    sorted_probs = [
+        (bitstr, p, qcopt.utils.graph_funcs.is_indset(bitstr, G))
+        for bitstr, p in probs.items()
     ]
-    probs = sorted(probs, key=lambda p: p[1], reverse=True)
+    sorted_probs = sorted(sorted_probs, key=lambda p: p[1], reverse=True)
 
-    return probs
+    return sorted_probs
 
 
 def get_approximation_ratio(out, P, G, brute_force_output=None, shots=8192, threads=0):

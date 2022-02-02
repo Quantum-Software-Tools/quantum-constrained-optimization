@@ -145,12 +145,11 @@ def main():
 
         for rep in rep_range:
             if args.alg == "qaoa" or args.alg == "qaoaWStart":
-                out = qcopt.qaoa_mis.solve_mis(
+                out = qcopt.qaoansatz_mis.solve_mis(
                     init_state,
                     G,
                     P=args.P,
                     m=args.m,
-                    sim="aer",
                     shots=args.shots,
                     verbose=args.v,
                     threads=args.threads,
@@ -161,7 +160,6 @@ def main():
                     G,
                     P=args.P,
                     m=args.m,
-                    sim="aer",
                     shots=args.shots,
                     verbose=args.v,
                     threads=args.threads,
@@ -240,14 +238,9 @@ def main():
 
             else:
                 if args.plim:
-                    savename = "{}_{}_lim{}_{}_rep{}.pickle".format(
-                        graphname, args.alg, args.plim, args.sim, rep
-                    )
+                    savename = f"{graphname}_{args.alg}_lim{args.plim}_rep{rep}.pickle"
                 else:
-                    savename = "{}_{}_P{}_{}_rep{}.pickle".format(
-                        graphname, args.alg, args.P, args.sim, rep
-                    )
-
+                    savename = "{graphname}_{args.alg}_P{args.P}_rep{rep}.pickle"
                 with open(cur_savepath + savename, "ab") as pf:
                     pickle.dump({"graph": graphfn, "out": out}, pf)
 

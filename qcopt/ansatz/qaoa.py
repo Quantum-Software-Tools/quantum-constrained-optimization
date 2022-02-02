@@ -9,42 +9,45 @@ Note that the QAO-Ansatz differs from the typical Quantum Approximate Optimizati
 Algorithm in the structure of the quantum circuits it uses. In this file, all
 mentions of "qaoa" actually refer to the QAO-Ansatz.
 """
+from typing import List
+
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit import ControlledGate
 from qiskit.circuit.library.standard_gates import RXGate
 from qiskit.transpiler.passes import Unroller
 from qiskit.transpiler import PassManager
-from qcopt.utils import graph_funcs
-from qcopt.utils import helper_funcs
+
+import qcopt
 
 
 def apply_mixer(circ, G, beta, barriers, decompose_toffoli, mixer_order, verbose=0):
 
-    # apply mixers U_M(beta) according to the order given in mixer_order
-    if mixer_order is None:
-        mixer_order = list(G.nodes)
-    if verbose > 0:
-        print("Mixer order:", mixer_order)
-    for qubit in mixer_order:
+    # apply partial mixers U_M^i according to the order given in mixer_order
+    for i, qubit in enumerate(mixer_order):
+        if isinstance(beta, List):
+            cur_angle = beta[i]
+        else:
+            cur_angle = beta
+
         neighbors = list(G.neighbors(qubit))
 
         if verbose > 0:
-            print("qubit:", qubit, "num_qubits =", len(circ.qubits), "neighbors:", neighbors)
+            print("qubit:", qubit, "neighbors:", neighbors)
 
         # Construct a multi-controlled Toffoli gate, with open-controls on q's neighbors
         # Qiskit has bugs when attempting to simulate custom controlled gates.
         # Instead, wrap a regular toffoli with X-gates
-        ctrl_qubits = [circ.qubits[i] for i in neighbors]
+        ctrl_qubits = [circ.qubits[j] for j in neighbors]
         if decompose_toffoli > 0:
             # Implement the multi-controlled Rx rotation using the decomposition given by
             # Lemma 5.1 in Barenco et. al. (https://arxiv.org/pdf/quant-ph/9503016.pdf)
             for ctrl in ctrl_qubits:
                 circ.x(ctrl)
             circ.rz(np.pi / 2, circ.qubits[qubit])
-            circ.ry(beta, circ.qubits[qubit])
+            circ.ry(cur_angle, circ.qubits[qubit])
             circ.mcx(ctrl_qubits, circ.qubits[qubit])
-            circ.ry(-1 * beta, circ.qubits[qubit])
+            circ.ry(-1 * cur_angle, circ.qubits[qubit])
             circ.mcx(ctrl_qubits, circ.qubits[qubit])
             circ.rz(-1 * np.pi / 2, circ.qubits[qubit])
             for ctrl in ctrl_qubits:
@@ -53,10 +56,10 @@ def apply_mixer(circ, G, beta, barriers, decompose_toffoli, mixer_order, verbose
             mcrx = ControlledGate(
                 "mcrx",
                 len(neighbors) + 1,
-                [2 * beta],
+                [2 * cur_angle],
                 num_ctrl_qubits=len(neighbors),
                 ctrl_state="0" * len(neighbors),
-                base_gate=RXGate(2 * beta),
+                base_gate=RXGate(2 * cur_angle),
             )
             circ.append(mcrx, ctrl_qubits + [circ.qubits[qubit]])
 
@@ -70,26 +73,26 @@ def apply_phase_separator(circ, gamma, G):
 
 
 def gen_qaoa(
-    G, P, params=[], init_state=None, barriers=1, decompose_toffoli=1, mixer_order=None, verbose=0
+    G, P, mixer_order=None, params=[], init_state=None, individual_partial_mixers=False, barriers=1, decompose_toffoli=1, verbose=0
 ):
 
     nq = len(G.nodes)
+    qaoa_circ = QuantumCircuit(nq, name="q")
+
+    if not mixer_order:
+        mixer_order = list(sorted(list(G.nodes)))
 
     # Step 1: Jump Start
     if init_state is None:
         # for now, select the all zero state
         init_state = "0" * nq
-
-    # Step 2: Mixer Initialization
-    qaoa_circ = QuantumCircuit(nq, name="q")
-
-    if init_state == "W":
+    elif init_state == "W":
         # Prepare the |W> initial state
         # TODO: change this to improve simulation efficiency
         W_vector = np.zeros(2 ** nq)
         for i in range(len(W_vector)):
             bitstr = "{:0{}b}".format(i, nq)
-            if helper_funcs.hamming_weight(bitstr) == 1:
+            if qcopt.helper_funcs.hamming_weight(bitstr) == 1:
                 W_vector[i] = 1 / np.sqrt(nq)
         qaoa_circ.initialize(W_vector, qaoa_circ.qubits[:-1])
     else:
@@ -100,10 +103,19 @@ def gen_qaoa(
     if barriers > 0:
         qaoa_circ.barrier()
 
-    # parse the variational parameters
-    assert len(params) == 2 * P, "Incorrect number of parameters!"
-    betas = [a for i, a in enumerate(params) if i % 2 == 0]
-    gammas = [a for i, a in enumerate(params) if i % 2 == 1]
+    # Step 2: Alternate applications of the mixer and driver unitaries
+    if individual_partial_mixers:
+        assert len(params) == P * (len(G.nodes) + 1), "Incorrect number of parameters!"
+        betas, gammas = [], []
+        for i in range(P):
+            chunk = params[i * (nq + 1) : (i + 1) * (nq + 1)]
+            betas.append(chunk[:-1])
+            gammas.append(chunk[-1])
+    else:
+        assert len(params) == 2 * P, "Incorrect number of parameters!"
+        betas = [a for i, a in enumerate(params) if i % 2 == 0]
+        gammas = [a for i, a in enumerate(params) if i % 2 == 1]
+
     if verbose > 0:
         print("betas:", betas)
         print("gammas:", gammas)

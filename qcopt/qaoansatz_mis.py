@@ -9,8 +9,7 @@ import qiskit
 from qiskit import Aer
 from qiskit.quantum_info import Statevector
 
-from qcopt.ansatz import qaoa
-from qcopt.utils import graph_funcs, helper_funcs
+import qcopt
 
 
 def solve_mis(
@@ -18,6 +17,7 @@ def solve_mis(
     G,
     P=1,
     m=1,
+    individual_partial_mixers=False,
     mixer_order=None,
     threshold=1e-5,
     cutoff=1,
@@ -27,11 +27,17 @@ def solve_mis(
     threads=0,
 ):
     """
-    Find the MIS of G using a Quantum Alternating Operator Ansatz (QAOA), the
-    structure of the driver and mixer unitaries is the same as that used by
-    DQVA and QLS, but each unitary is parameterized by a single angle:
+    Find the MIS of G using the Quantum Alternating Operator Ansatz (QAOA).
+
+    The structure of the mixer unitaries keeps the initial state within the feasible
+    subspace of possible MIS solutions. Furthermore, the mixer can be parameterized
+    by a single angle which is shared amongst all of the partial mixers:
 
         U_C_P(gamma_P) * U_M_P(beta_P) * ... * U_C_1(gamma_1) * U_M_1(beta_1)|0>
+
+    Or the mixer may be parameterized by a vector of angles, one for each partial mixer:
+
+        U_C_P(gamma_P) * U_M_P([b_1,..., b_n]_P) * ... * U_C_1(gamma_1) * U_M_1(b_1,..., b_n]_P)|0>
     """
 
     # Initialization
@@ -46,20 +52,20 @@ def solve_mis(
         cur_permutation = list(np.random.permutation(list(G.nodes)))
     else:
         cur_permutation = mixer_order
-
-    history = []
+    if verbose > 0:
+        print("Mixer order:", cur_permutation)
 
     # This function will be what scipy.minimize optimizes
     def f(params):
         # Generate a QAOA circuit
-        circ = qaoa.gen_qaoa(
+        circ = qcopt.ansatz.qaoa.gen_qaoa(
             G,
             P,
+            cur_permutation,
             params=params,
-            init_state=cur_init_state,
+            init_state=init_state,
             barriers=0,
             decompose_toffoli=1,
-            mixer_order=cur_permutation,
             verbose=0,
         )
 
@@ -85,123 +91,76 @@ def solve_mis(
         # print('Expectation value:', avg_cost)
         return -avg_cost
 
-    # Begin outer optimization loop
-    best_indset = init_state
-    best_init_state = init_state
-    cur_init_state = init_state
-    best_params = None
-    best_perm = copy.copy(cur_permutation)
+    # Begin variational optimization loop
+    if individual_partial_mixers:
+        num_params = P * (len(G.nodes) + 1)
+    else:
+        num_params = 2 * P
 
-    # Randomly permute the order of mixer unitaries m times
-    for mixer_round in range(1, m + 1):
-        mixer_history = []
-        inner_round = 1
-        new_hamming_weight = helper_funcs.hamming_weight(cur_init_state)
+    init_params = np.random.uniform(low=0.0, high=2 * np.pi, size=num_params)
 
-        # Attempt to improve the Hamming weight until no further improvements can be made
-        # QAOA only uses a single inner round
-        # Break out of the While loop after the 1st iteration
-        while inner_round < 2:
-            print(
-                "Start round {}.{}, Initial state = {}".format(
-                    mixer_round, inner_round, cur_init_state
-                )
-            )
+    if verbose:
+        print("\tNum params =", num_params)
+        print("\tCurrent Mixer Order:", cur_permutation)
 
-            # Begin Inner variational loop
-            num_params = 2 * P
-            print("\tNum params =", num_params)
-            # Important to start from random initial points
-            # init_params = np.zeros(num_params)
-            init_params = np.random.uniform(low=0.0, high=2 * np.pi, size=num_params)
-            print("\tCurrent Mixer Order:", cur_permutation)
+    out = minimize(f, x0=init_params, method="COBYLA")
 
-            out = minimize(f, x0=init_params, method="COBYLA")
+    opt_params = out["x"]
+    opt_cost = out["fun"]
+    if verbose:
+        print("\tOptimal cost:", opt_cost)
 
-            opt_params = out["x"]
-            opt_cost = out["fun"]
-            # print('\tOptimal Parameters:', opt_params)
-            print("\tOptimal cost:", opt_cost)
+    # Construct the fully optimized circuit
+    opt_circ = qcopt.ansatz.qaoa.gen_qaoa(
+        G,
+        P,
+        cur_permutation,
+        params=opt_params,
+        init_state=init_state,
+        barriers=0,
+        decompose_toffoli=1,
+        verbose=verbose,
+    )
 
-            # Get the results of the optimized circuit
-            opt_circ = qaoa.gen_qaoa(
-                G,
-                P,
-                params=opt_params,
-                init_state=cur_init_state,
-                barriers=0,
-                decompose_toffoli=1,
-                mixer_order=cur_permutation,
-                verbose=0,
-            )
+    if sim == "qasm":
+        opt_circ.measure_all()
+    elif sim == "statevector":
+        opt_circ.save_statevector()
 
-            if sim == "qasm":
-                opt_circ.measure_all()
-            elif sim == "statevector":
-                opt_circ.save_statevector()
+    result = qiskit.execute(opt_circ, backend=backend, shots=shots).result()
+    if sim == "statevector":
+        probs = Statevector(result.get_statevector(opt_circ)).probabilities_dict(decimals=5)
+    elif sim == "qasm":
+        probs = {key: val / shots for key, val in result.get_counts(opt_circ).items()}
 
-            result = qiskit.execute(opt_circ, backend=backend, shots=shots).result()
-            if sim == "statevector":
-                probs = Statevector(result.get_statevector(opt_circ)).probabilities_dict(decimals=5)
-            elif sim == "qasm":
-                probs = {key: val / shots for key, val in result.get_counts(opt_circ).items()}
+    # Select the most probable bitstring as the output of the optimization
+    top_counts = sorted(
+        [(key, val) for key, val in probs.items() if val > threshold],
+        key=lambda tup: tup[1],
+        reverse=True,
+    )[:cutoff]
 
-            # Select the top [cutoff] bitstrings
-            top_counts = sorted(
-                [(key, val) for key, val in probs.items() if val > threshold],
-                key=lambda tup: tup[1],
-                reverse=True,
-            )[:cutoff]
+    best_hamming_weight = 0
+    best_indset = None
+    for bitstr in top_counts:
+        if qcopt.helper_funcs.hamming_weight(bitstr) > best_hamming_weight:
+            best_hamming_weight = qcopt.helper_funcs.hamming_weight(bitstr)
+            best_indset = bitstr
 
-            # Check if we have improved the Hamming weight
-            #     NOTE: hamming_weight(W) = 0
-            best_hamming_weight = helper_funcs.hamming_weight(best_indset)
-            better_strs = []
-            for bitstr, prob in top_counts:
-                this_hamming = helper_funcs.hamming_weight(bitstr)
-                if graph_funcs.is_indset(bitstr, G) and this_hamming > best_hamming_weight:
-                    better_strs.append((bitstr, this_hamming))
-            better_strs = sorted(better_strs, key=lambda t: t[1], reverse=True)
+    if verbose:
+        print(f"\tFound new independent set: {best_indset}, Hamming weight = {best_hamming_weight}")
 
-            # Save current results to history
-            inner_history = {
-                "mixer_round": mixer_round,
-                "inner_round": inner_round,
-                "cost": opt_cost,
-                "function_evals": out["nfev"],
-                "init_state": cur_init_state,
-                "mixer_order": copy.copy(cur_permutation),
-                "num_params": num_params,
-                "opt_params": opt_params,
-                "P": P,
-            }
-            mixer_history.append(inner_history)
+    # Save the output of the variational optimization
+    data_dict = {
+        "best_indset": best_indset,
+        "cost": opt_cost,
+        "function_evals": out["nfev"],
+        "init_state": init_state,
+        "mixer_order": cur_permutation,
+        "num_params": num_params,
+        "opt_params": opt_params,
+        "P": P,
+        "individual_partial_mixers": individual_partial_mixers,
+    }
 
-            # If no improvement was made, break and go to next mixer round
-            if len(better_strs) == 0:
-                print(
-                    "\tNone of the measured bitstrings had higher Hamming weight than:", best_indset
-                )
-                break
-
-            # Otherwise, save the new bitstring and repeat
-            best_indset, new_hamming_weight = better_strs[0]
-            best_init_state = cur_init_state
-            best_params = opt_params
-            best_perm = copy.copy(cur_permutation)
-            cur_init_state = best_indset
-            print(
-                "\tFound new independent set: {}, Hamming weight = {}".format(
-                    best_indset, new_hamming_weight
-                )
-            )
-            inner_round += 1
-
-        # Save the history of the current mixer round
-        history.append(mixer_history)
-
-        # Choose a new permutation of the mixer unitaries
-        cur_permutation = list(np.random.permutation(list(G.nodes)))
-
-    print("\tRETURNING, best hamming weight:", new_hamming_weight)
-    return best_indset, best_params, best_init_state, best_perm, history
+    return data_dict
