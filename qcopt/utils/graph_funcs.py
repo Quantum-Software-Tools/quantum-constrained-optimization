@@ -113,15 +113,17 @@ def get_subgraphs(G, partition):
     return subgraphs, cut_edges
 
 
-def is_indset(bitstr, G):
-    nodes = list(G.nodes)
-    ind_set = []
-    for idx, bit in enumerate(reversed(bitstr)):
+def is_indset(bitstr, G, little_endian=True):
+    if little_endian:
+        big_endian_bitstring = ''.join([b for b in reversed(bitstr)])
+    else:
+        big_endian_bitstring = bitstr
+    ind_set = [node for node, bit in enumerate(big_endian_bitstring) if bit == '1']
+
+    for node, bit in enumerate(big_endian_bitstring):
         if bit == "1":
-            cur_neighbors = list(G.neighbors(idx))
-            for node in ind_set:
-                if node in cur_neighbors:
+            neighbors = list(G.neighbors(node))
+            for is_node in ind_set:
+                if is_node in neighbors:
                     return False
-            else:
-                ind_set.append(idx)
     return True
