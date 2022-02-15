@@ -1,29 +1,28 @@
 #!/usr/bin/env python
+import os
 import glob
 import networkx as nx
 
-import sys
-
-sys.path.append("../")
-
-from utils.graph_funcs import graph_from_file
-
+import qcopt
 
 def is_unique(folder, G):
     all_graphs = glob.glob(folder + "/*")
 
     for graph in all_graphs:
-        cur_G = graph_from_file(graph)
+        cur_G = qcopt.graph_funcs.graph_from_file(graph)
         if nx.is_isomorphic(G, cur_G):
             return False
 
     return True
 
+N = 20
 
-dirs = glob.glob("N20_p*")
-
-for folder in dirs:
+for pval in [50, 80]:
+    folder = f'N{N}_p{pval}_graphs/'
     print(folder)
+    if not os.path.isdir(folder):
+      os.mkdir(folder)
+
     n = int(folder.split("_")[0][1:])
     p = int(folder.split("_")[1][1:]) / 100
     print("Nodes: {}, probability: {}".format(n, p))
