@@ -1,13 +1,11 @@
 import copy
+
 import numpy as np
 import networkx as nx
-
-from networkx.algorithms.community.kernighan_lin import kernighan_lin_bisection
-from scipy.optimize import minimize
-
 import qiskit
 from qiskit import Aer
 from qiskit.quantum_info import Statevector
+from scipy.optimize import minimize
 
 from qcopt.ansatz import dqva
 from qcopt.utils import graph_funcs
@@ -158,7 +156,7 @@ def solve_mis(
             better_strs = []
             for bitstr, prob in top_counts:
                 this_hamming = helper_funcs.hamming_weight(bitstr)
-                if graph_funcs.is_indset(bitstr, G) and this_hamming > best_hamming_weight:
+                if graph_funcs.is_indset(bitstr, G, little_endian=True) and this_hamming > best_hamming_weight:
                     better_strs.append((bitstr, this_hamming))
             better_strs = sorted(better_strs, key=lambda t: t[1], reverse=True)
 
@@ -173,6 +171,7 @@ def solve_mis(
                 "num_params": num_params,
                 "opt_params": opt_params,
                 "P": P,
+                "better_strs": better_strs,
             }
             mixer_history.append(inner_history)
 

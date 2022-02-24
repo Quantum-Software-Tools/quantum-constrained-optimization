@@ -10,8 +10,8 @@ from qiskit.circuit import ControlledGate
 from qiskit.circuit.library.standard_gates import RXGate
 from qiskit.transpiler.passes import Unroller
 from qiskit.transpiler import PassManager
-from qcopt.utils.graph_funcs import *
-from qcopt.utils.helper_funcs import *
+
+import qcopt
 
 
 def apply_mixer(circ, alpha, init_state, G, barriers, decompose_toffoli, mixer_order, verbose=0):
@@ -138,7 +138,7 @@ def gen_dqva(
     # parse the variational parameters
     # The dqva ansatz dynamically turns off partial mixers for qubits in |1>
     # and adds extra mixers to the end of the circuit
-    num_nonzero = nq - hamming_weight(init_state)
+    num_nonzero = nq - qcopt.helper_funcs.hamming_weight(init_state)
     assert len(params) == (nq + 1) * P, "Incorrect number of parameters!"
     alpha_list = []
     gamma_list = []
