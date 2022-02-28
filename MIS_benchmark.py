@@ -43,6 +43,9 @@ def parse_args():
     parser.add_argument("--sim", type=str, default=None, help="Choose the simulation backend")
     parser.add_argument("--reps", type=int, default=4, help="Number of repetitions to run")
     parser.add_argument("-m", type=int, default=3, help="Number of mixer rounds")
+    parser.add_argument(
+        "--ipm", type=int, default=0, help="Individual partial mixers in QAO-Ansatz"
+    )
     parser.add_argument("--shots", type=int, default=8192, help="Number of shots")
     parser.add_argument("-v", type=int, default=1, help="verbose")
     parser.add_argument("--plim", type=int, default=None, help="Limit the number of parameters")
@@ -76,13 +79,11 @@ def main():
         "qaoaWStart",
     ]:
         raise Exception("Unknown algorithm:", args.alg)
-    if args.sim not in ["qasm", "statevector", "cloud"]:
-        raise Exception("Unknown backend:", args.sim)
 
     all_graphs = glob.glob(DQVAROOT + args.graph)
     graph_type = all_graphs[0].split("/")[-2]
 
-    savepath = DQVAROOT + "benchmark_results/{}_P{}_{}/".format(args.alg, args.P, args.sim)
+    savepath = DQVAROOT + "benchmark_results/{}_P{}_{}/".format(args.alg, args.P)
     if not os.path.isdir(savepath):
         os.mkdir(savepath)
 
@@ -150,6 +151,7 @@ def main():
                     G,
                     P=args.P,
                     m=args.m,
+                    individual_partial_mixers=(args.ipm == 1),
                     shots=args.shots,
                     verbose=args.v,
                     threads=args.threads,
