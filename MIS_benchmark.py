@@ -83,7 +83,7 @@ def main():
     all_graphs = glob.glob(DQVAROOT + args.graph)
     graph_type = all_graphs[0].split("/")[-2]
 
-    savepath = DQVAROOT + "benchmark_results/{}_P{}_{}/".format(args.alg, args.P)
+    savepath = DQVAROOT + "benchmark_results/{}_P{}/".format(args.alg, args.P)
     if not os.path.isdir(savepath):
         os.mkdir(savepath)
 
