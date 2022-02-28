@@ -6,6 +6,7 @@ to solve the MIS problem
 import os, sys, argparse, glob
 import numpy as np
 import pickle, random
+from pathlib import Path
 
 import qcopt
 
@@ -83,13 +84,9 @@ def main():
     all_graphs = glob.glob(DQVAROOT + args.graph)
     graph_type = all_graphs[0].split("/")[-2]
 
-    savepath = DQVAROOT + "benchmark_results/{}_P{}/".format(args.alg, args.P)
-    if not os.path.isdir(savepath):
-        os.mkdir(savepath)
-
-    savepath += "{}/".format(graph_type)
-    if not os.path.isdir(savepath):
-        os.mkdir(savepath)
+    savepath = DQVAROOT + f"benchmark_results/{args.alg}_P{args.P}/"
+    savepath += f"{graph_type}/"
+    Path(savepath).mkdir(parents=True, exist_ok=True)
 
     for graphfn in all_graphs:
         graphname = graphfn.split("/")[-1].strip(".txt")
