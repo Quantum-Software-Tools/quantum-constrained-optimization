@@ -150,7 +150,6 @@ def main():
                     init_state,
                     G,
                     P=args.P,
-                    m=args.m,
                     individual_partial_mixers=(args.ipm == 1),
                     shots=args.shots,
                     verbose=args.v,
