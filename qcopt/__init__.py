@@ -4,7 +4,7 @@ from . import qaoansatz_mis
 from . import qaoa_plus_mis
 from .ansatz import dqva
 from .ansatz import dqv_ancilla_ansatz
-from .ansatz import qaoa
+from .ansatz import qao_ansatz
 from .ansatz import qao_ancilla_ansatz
 from .ansatz import qaoa_plus
 from .ansatz import qlsa
@@ -18,7 +18,7 @@ __all__ = [
     "qaoansatz_mis",
     "dqva",
     "dqv_ancilla_ansatz",
-    "qaoa",
+    "qao_ansatz",
     "qao_ancilla_ansatz",
     "qaoa_plus",
     "qlsa",

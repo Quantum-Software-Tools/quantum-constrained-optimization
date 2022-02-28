@@ -115,10 +115,10 @@ def get_subgraphs(G, partition):
 
 def is_indset(bitstr, G, little_endian=True):
     if little_endian:
-        big_endian_bitstring = ''.join([b for b in reversed(bitstr)])
+        big_endian_bitstring = "".join([b for b in reversed(bitstr)])
     else:
         big_endian_bitstring = bitstr
-    ind_set = [node for node, bit in enumerate(big_endian_bitstring) if bit == '1']
+    ind_set = [node for node, bit in enumerate(big_endian_bitstring) if bit == "1"]
 
     for node, bit in enumerate(big_endian_bitstring):
         if bit == "1":

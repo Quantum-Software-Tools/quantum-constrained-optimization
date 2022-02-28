@@ -63,12 +63,12 @@ def main():
                 )
 
                 data_dict = {
-                        "lambda": Lambda,
-                        "graph": graphfn,
-                        "P": args.P,
-                        "function_evals": out["nfev"],
-                        "opt_params": out["x"],
-                        "ratios": ratios,
+                    "lambda": Lambda,
+                    "graph": graphfn,
+                    "P": args.P,
+                    "function_evals": out["nfev"],
+                    "opt_params": out["x"],
+                    "ratios": ratios,
                 }
 
                 print(f"lambda: {Lambda:.3f}, ratios = {ratios[0]:.3f}, {ratios[1]:.3f}")

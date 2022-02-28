@@ -9,8 +9,9 @@ Note that the QAO-Ansatz differs from the typical Quantum Approximate Optimizati
 Algorithm in the structure of the quantum circuits it uses. In this file, all
 mentions of "qaoa" actually refer to the QAO-Ansatz.
 """
-from typing import List
+from typing import List, Optional, Union
 
+import networkx as nx
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit import ControlledGate
@@ -21,7 +22,15 @@ from qiskit.transpiler import PassManager
 import qcopt
 
 
-def apply_mixer(circ, G, beta, barriers, decompose_toffoli, mixer_order, verbose=0):
+def apply_mixer(
+    circ: QuantumCircuit,
+    G: nx.Graph,
+    beta: Union[float, List],
+    barriers: bool,
+    decompose_toffoli: int,
+    mixer_order: List[int],
+    verbose: int = 0,
+):
 
     # apply partial mixers U_M^i according to the order given in mixer_order
     for i, qubit in enumerate(mixer_order):
@@ -67,13 +76,21 @@ def apply_mixer(circ, G, beta, barriers, decompose_toffoli, mixer_order, verbose
             circ.barrier()
 
 
-def apply_phase_separator(circ, gamma, G):
+def apply_phase_separator(circ: QuantumCircuit, gamma: float, G: nx.Graph):
     for qb in G.nodes:
         circ.rz(2 * gamma, qb)
 
 
 def gen_qaoa(
-    G, P, mixer_order=None, params=[], init_state=None, individual_partial_mixers=False, barriers=1, decompose_toffoli=1, verbose=0
+    G: nx.Graph,
+    P: int,
+    mixer_order: Optional[List[int]] = None,
+    params: List = [],
+    init_state: str = None,
+    individual_partial_mixers: bool = False,
+    barriers: int = 1,
+    decompose_toffoli: int = 1,
+    verbose: int = 0,
 ):
 
     nq = len(G.nodes)
@@ -94,7 +111,7 @@ def gen_qaoa(
             bitstr = "{:0{}b}".format(i, nq)
             if qcopt.helper_funcs.hamming_weight(bitstr) == 1:
                 W_vector[i] = 1 / np.sqrt(nq)
-        qaoa_circ.initialize(W_vector, qaoa_circ.qubits[:-1])
+        qaoa_circ.initialize(W_vector, qaoa_circ.qubits)
     else:
         for qb, bit in enumerate(reversed(init_state)):
             if bit == "1":
@@ -109,7 +126,7 @@ def gen_qaoa(
         betas, gammas = [], []
         for i in range(P):
             chunk = params[i * (nq + 1) : (i + 1) * (nq + 1)]
-            betas.append(chunk[:-1])
+            betas.append(list(chunk[:-1]))
             gammas.append(chunk[-1])
     else:
         assert len(params) == 2 * P, "Incorrect number of parameters!"
@@ -121,9 +138,7 @@ def gen_qaoa(
         print("gammas:", gammas)
 
     for beta, gamma in zip(betas, gammas):
-        apply_mixer(
-            qaoa_circ, G, beta, barriers, decompose_toffoli, mixer_order, verbose=verbose
-        )
+        apply_mixer(qaoa_circ, G, beta, barriers, decompose_toffoli, mixer_order, verbose=verbose)
         if barriers > 0:
             qaoa_circ.barrier()
 

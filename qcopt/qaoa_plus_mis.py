@@ -15,7 +15,9 @@ def solve_mis(P, G, Lambda, shots=1024, threads=0):
         circ.save_statevector()
 
         result = qiskit.execute(circ, backend=backend, shots=shots).result()
-        probs = qiskit.quantum_info.Statevector(result.get_statevector(circ)).probabilities_dict(decimals=5)
+        probs = qiskit.quantum_info.Statevector(result.get_statevector(circ)).probabilities_dict(
+            decimals=5
+        )
 
         return -1 * expectation_value(probs, G, Lambda)
 
@@ -45,11 +47,12 @@ def get_ranked_probs(P, G, params, threads=0):
     circ = qcopt.ansatz.qaoa_plus.construct_qaoa_plus(P, G, params=params, measure=False)
     circ.save_statevector()
     result = qiskit.execute(circ, backend=backend).result()
-    probs = qiskit.quantum_info.Statevector(result.get_statevector(circ)).probabilities_dict(decimals=5)
+    probs = qiskit.quantum_info.Statevector(result.get_statevector(circ)).probabilities_dict(
+        decimals=5
+    )
 
     sorted_probs = [
-        (bitstr, p, qcopt.utils.graph_funcs.is_indset(bitstr, G))
-        for bitstr, p in probs.items()
+        (bitstr, p, qcopt.utils.graph_funcs.is_indset(bitstr, G)) for bitstr, p in probs.items()
     ]
     sorted_probs = sorted(sorted_probs, key=lambda p: p[1], reverse=True)
 

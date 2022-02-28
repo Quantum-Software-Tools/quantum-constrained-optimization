@@ -5,6 +5,7 @@ import networkx as nx
 
 import qcopt
 
+
 def is_unique(folder, G):
     all_graphs = glob.glob(folder + "/*")
 
@@ -15,13 +16,14 @@ def is_unique(folder, G):
 
     return True
 
+
 N = 20
 
 for pval in [50, 80]:
-    folder = f'N{N}_p{pval}_graphs/'
+    folder = f"N{N}_p{pval}_graphs/"
     print(folder)
     if not os.path.isdir(folder):
-      os.mkdir(folder)
+        os.mkdir(folder)
 
     n = int(folder.split("_")[0][1:])
     p = int(folder.split("_")[1][1:]) / 100

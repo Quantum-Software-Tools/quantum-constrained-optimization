@@ -35,7 +35,7 @@ def solve_mis(
     backend = Aer.get_backend("aer_simulator_statevector", max_parallel_threads=threads)
     if sim == "cloud":
         raise Exception("NOT YET IMPLEMENTED!")
-    elif sim not in ['statevector', 'qasm']:
+    elif sim not in ["statevector", "qasm"]:
         raise Exception("Unknown simulator:", sim)
 
     # Select and order for the partial mixers
@@ -156,7 +156,10 @@ def solve_mis(
             better_strs = []
             for bitstr, prob in top_counts:
                 this_hamming = helper_funcs.hamming_weight(bitstr)
-                if graph_funcs.is_indset(bitstr, G, little_endian=True) and this_hamming > best_hamming_weight:
+                if (
+                    graph_funcs.is_indset(bitstr, G, little_endian=True)
+                    and this_hamming > best_hamming_weight
+                ):
                     better_strs.append((bitstr, this_hamming))
             better_strs = sorted(better_strs, key=lambda t: t[1], reverse=True)
 
