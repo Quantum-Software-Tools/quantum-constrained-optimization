@@ -84,7 +84,10 @@ def main():
     all_graphs = glob.glob(DQVAROOT + args.graph)
     graph_type = all_graphs[0].split("/")[-2]
 
-    savepath = DQVAROOT + f"benchmark_results/{args.alg}_P{args.P}/"
+    if "qaoa" in args.alg:
+        savepath = DQVAROOT + f"benchmark_results/{args.alg}_IPM{args.ipm}_P{args.P}/"
+    else:
+        savepath = DQVAROOT + f"benchmark_results/{args.alg}_P{args.P}/"
     savepath += f"{graph_type}/"
     Path(savepath).mkdir(parents=True, exist_ok=True)
 
@@ -238,7 +241,7 @@ def main():
                 if args.plim:
                     savename = f"{graphname}_{args.alg}_lim{args.plim}_rep{rep}.pickle"
                 else:
-                    savename = "{graphname}_{args.alg}_P{args.P}_rep{rep}.pickle"
+                    savename = f"{graphname}_{args.alg}_P{args.P}_rep{rep}.pickle"
                 with open(cur_savepath + savename, "ab") as pf:
                     pickle.dump({"graph": graphfn, "out": out}, pf)
 
