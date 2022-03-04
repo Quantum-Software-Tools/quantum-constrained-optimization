@@ -148,7 +148,7 @@ def gen_qaoa(
 
     if decompose_toffoli > 1:
         # basis_gates = ['x', 'cx', 'barrier', 'crx', 'tdg', 't', 'rz', 'h']
-        basis_gates = ["x", "h", "cx", "crx", "rz", "t", "tdg", "u1"]
+        basis_gates = ["u1", "u2", "u3", "cx"]
         pass_ = Unroller(basis_gates)
         pm = PassManager(pass_)
         qaoa_circ = pm.run(qaoa_circ)
