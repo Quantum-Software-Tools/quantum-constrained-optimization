@@ -42,7 +42,7 @@ def main():
 
     for graphfn in all_graphs:
         graphname = graphfn.split("/")[-1].strip(".txt")
-        cur_savepath = savepath + f"{graphname}/"
+        cur_savepath = savepath + f"{graphname}/extra_lambda/"
         Path(cur_savepath).mkdir(parents=True, exist_ok=True)
 
         G = qcopt.utils.graph_funcs.graph_from_file(graphfn)
@@ -50,7 +50,7 @@ def main():
 
         for rep in range(1, args.reps + 1):
             data_list = []
-            for Lambda in np.arange(0.1, 10, 0.7):
+            for Lambda in np.arange(0.25, 4, 0.25):
                 out = qcopt.qaoa_plus_mis.solve_mis(args.P, G, Lambda, threads=args.threads)
 
                 # Compute the approximation ratio by summing over only valid ISs and by taking the most likely IS
