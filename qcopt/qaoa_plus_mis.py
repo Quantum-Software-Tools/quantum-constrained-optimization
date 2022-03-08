@@ -16,7 +16,7 @@ def solve_mis(P, G, Lambda, shots=1024, threads=0):
 
         result = qiskit.execute(circ, backend=backend, shots=shots).result()
         probs = qiskit.quantum_info.Statevector(result.get_statevector(circ)).probabilities_dict(
-            decimals=5
+            decimals=7
         )
 
         return -1 * expectation_value(probs, G, Lambda)
