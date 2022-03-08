@@ -18,6 +18,7 @@ def parse_args():
     parser.add_argument("--graphtype", type=str, default=None, help='Graph type to load (d3, p20, p50, p80)')
     parser.add_argument("--graphname", type=str, default=None, help="Graph name (1, 2, 1 to 10, 11 to 30, ....)")
     parser.add_argument("--repname", type=str, default=None, help="Rep name (1, 1 to 5, extra 1, extra 1 to 5, ...)")
+    parser.add_argument("--threads", type=int, default=2, help="Number of threads in circuit simulation")
     args = parser.parse_args()
     return args
 
@@ -83,7 +84,7 @@ def main():
         else:
             rep_globs = [f"*rep{args.repname}.pickle"]
 
-    backend = qiskit.Aer.get_backend("aer_simulator_statevector", max_parallel_threads=4)
+    backend = qiskit.Aer.get_backend("aer_simulator_statevector", max_parallel_threads=args.threads)
 
     columns = ["lambda", "expectation_value", "p", "N", "graph_type", "graph_name", "rep_name"]
     df = pd.DataFrame(columns=columns)
