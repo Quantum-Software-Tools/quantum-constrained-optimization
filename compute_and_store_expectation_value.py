@@ -15,6 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--path", type=str, default=None, help="path to project")
     parser.add_argument("-P", type=int, default=1, help="P-value for QAOA")
+    parser.add_argument("-N", type=int, default=20, help="Number of nodes")
     parser.add_argument("--graphtype", type=str, default=None, help='Graph type to load (d3, p20, p50, p80)')
     parser.add_argument("--graphname", type=str, default=None, help="Graph name (1, 2, 1 to 10, 11 to 30, ....)")
     parser.add_argument("--repname", type=str, default=None, help="Rep name (1, 1 to 5, extra 1, extra 1 to 5, ...)")
@@ -59,8 +60,6 @@ def main():
     Path(csv_savepath).mkdir(parents=True, exist_ok=True)
     csv_savename = f"qaoa+_P{args.P}_{args.graphtype}_graphs_{'_'.join(args.graphname.split())}_rep{'_'.join(args.repname.split())}.csv"
 
-    # Everything is hardcoded to 20 nodes
-    num_nodes = 20
     # Only allow a single p and graph_type, but multiple graph_names and reps
     if 'to' in args.graphname:
         lowerlim = int(args.graphname.split()[0])
@@ -91,7 +90,7 @@ def main():
 
     for graph_name in graph_names:
         for rep_glob in rep_globs:
-            qaoa_plus_data = get_pickle(ROOT, args, num_nodes, graph_name, rep_glob, verbose=0)
+            qaoa_plus_data = get_pickle(ROOT, args, args.N, graph_name, rep_glob, verbose=0)
             if "extra" in rep_glob:
                 cur_rep_name = f"extra_{rep_glob.split('*')[-1].strip('.pickle')}"
             else:
@@ -117,7 +116,7 @@ def main():
                 expected_energy = qcopt.qaoa_plus_mis.expectation_value(probs, G, rounded_lambda)
 
                 # Save to the DataFrame
-                save_values = [rounded_lambda, expected_energy, args.P, num_nodes,
+                save_values = [rounded_lambda, expected_energy, args.P, args.N,
                                args.graphtype, graph_name, cur_rep_name]
                 df = pd.concat([df, pd.DataFrame([save_values], columns=columns)])
 
