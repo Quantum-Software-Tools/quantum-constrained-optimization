@@ -1,0 +1,8 @@
+N10_p50_graphs, G6
+Optimal MIS is 4
+Optimal MIS:
+	0100001110, valid: True
+	0100010110, valid: True
+	0100110100, valid: True
+	1100000110, valid: True
+	1100100100, valid: True
