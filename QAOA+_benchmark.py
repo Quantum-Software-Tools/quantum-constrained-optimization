@@ -53,7 +53,7 @@ def main():
 
         for rep in range(1, args.reps + 1):
             data_list = []
-            for Lambda in np.arange(args.lowerlim, args.upperlim, args.step)
+            for Lambda in np.arange(args.lowerlim, args.upperlim, args.step):
                 out = qcopt.qaoa_plus_mis.solve_mis(args.P, G, Lambda, threads=args.threads)
 
                 # Compute the approximation ratio by summing over only valid ISs and by taking the most likely IS
