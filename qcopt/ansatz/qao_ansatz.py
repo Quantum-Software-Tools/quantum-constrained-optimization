@@ -22,7 +22,7 @@ from qiskit.transpiler.passes import BasisTranslator
 from qiskit.transpiler import PassManager
 from qiskit.converters import circuit_to_dag, dag_to_circuit
 
-from gate_decomp import CustomEquivalenceLibrary
+from qcopt.ansatz.gate_decomp import CustomEquivalenceLibrary
 
 import qcopt
 
