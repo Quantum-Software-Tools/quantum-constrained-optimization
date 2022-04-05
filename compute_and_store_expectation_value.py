@@ -56,7 +56,7 @@ def main():
     sys.path.append(ROOT)
 
     # Parse input params
-    csv_savepath = ROOT + f"benchmark_results/QAOA+_expectation_values/"
+    csv_savepath = ROOT + f"benchmark_results/QAOA+_expectation_values/N{args.N}_{args.graphtype}_graphs/"
     Path(csv_savepath).mkdir(parents=True, exist_ok=True)
     csv_savename = f"qaoa+_P{args.P}_{args.graphtype}_graphs_{'_'.join(args.graphname.split())}_rep{'_'.join(args.repname.split())}.csv"
 
@@ -97,7 +97,7 @@ def main():
                 cur_rep_name = rep_glob.split('*')[-1].strip('.pickle')
 
             print(f'Processing QAOA+ p = {args.P}, {args.graphtype} graph {graph_name} {cur_rep_name}')
-            dist_savepath = ROOT + f"benchmark_results/QAOA+_output_distributions/P{args.P}_{args.graphtype}/{graph_name}_{cur_rep_name}/"
+            dist_savepath = ROOT + f"benchmark_results/QAOA+_output_distributions/P{args.P}_{args.graphtype}_N{args.N}/{graph_name}_{cur_rep_name}/"
             Path(dist_savepath).mkdir(parents=True, exist_ok=True)
             for data_dict in qaoa_plus_data:
                 rounded_lambda = round(data_dict['lambda'], 3)
