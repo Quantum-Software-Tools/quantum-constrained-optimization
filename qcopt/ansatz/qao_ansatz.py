@@ -15,9 +15,14 @@ import networkx as nx
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit import ControlledGate
+from qiskit.circuit import EquivalenceLibrary
 from qiskit.circuit.library.standard_gates import RXGate
 from qiskit.transpiler.passes import Unroller
+from qiskit.transpiler.passes import BasisTranslator
 from qiskit.transpiler import PassManager
+from qiskit.converters import circuit_to_dag, dag_to_circuit
+
+from qcopt.ansatz.gate_decomp import CustomEquivalenceLibrary
 
 import qcopt
 
@@ -147,10 +152,14 @@ def gen_qaoa(
             qaoa_circ.barrier()
 
     if decompose_toffoli > 1:
-        # basis_gates = ['x', 'cx', 'barrier', 'crx', 'tdg', 't', 'rz', 'h']
-        basis_gates = ["u1", "u2", "u3", "cx"]
-        pass_ = Unroller(basis_gates)
+        basis_gates_u = ['u1', 'u2', 'u3', 'cx', 'u']
+        basis_gates = ['u1', 'u2', 'u3', 'cx']
+        pass_ = Unroller(basis_gates_u)
         pm = PassManager(pass_)
         qaoa_circ = pm.run(qaoa_circ)
+        
+        bt_pass = BasisTranslator(CustomEquivalenceLibrary, basis_gates)
+        dag_out = bt_pass.run(circuit_to_dag(qaoa_circ))
+        qaoa_circ = dag_to_circuit(dag_out)
 
     return qaoa_circ
