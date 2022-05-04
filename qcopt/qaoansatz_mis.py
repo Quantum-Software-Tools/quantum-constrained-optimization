@@ -78,7 +78,7 @@ def solve_mis(
         # Compute the cost function
         result = qiskit.execute(circ, backend=backend, shots=shots).result()
         if sim == "statevector":
-            probs = Statevector(result.get_statevector(circ)).probabilities_dict(decimals=5)
+            probs = Statevector(result.get_statevector(circ)).probabilities_dict(decimals=7)
         elif sim == "qasm":
             probs = {key: val / shots for key, val in result.get_counts(circ).items()}
 
@@ -131,7 +131,7 @@ def solve_mis(
 
     result = qiskit.execute(opt_circ, backend=backend, shots=shots).result()
     if sim == "statevector":
-        probs = Statevector(result.get_statevector(opt_circ)).probabilities_dict(decimals=5)
+        probs = Statevector(result.get_statevector(opt_circ)).probabilities_dict(decimals=7)
     elif sim == "qasm":
         probs = {key: val / shots for key, val in result.get_counts(opt_circ).items()}
 
