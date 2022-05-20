@@ -19,7 +19,7 @@ def is_unique(folder, G):
 
 N = 20
 
-for pval in [50, 80]:
+for pval in [50]:
     folder = f"N{N}_p{pval}_graphs/"
     print(folder)
     if not os.path.isdir(folder):
@@ -29,8 +29,8 @@ for pval in [50, 80]:
     p = int(folder.split("_")[1][1:]) / 100
     print("Nodes: {}, probability: {}".format(n, p))
 
-    count = 0
-    while count < 30:
+    count = 30
+    while count < 50:
         G = nx.generators.random_graphs.erdos_renyi_graph(n, p)
         if nx.is_connected(G) and is_unique(folder, G):
             count += 1

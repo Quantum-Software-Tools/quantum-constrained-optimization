@@ -2,18 +2,20 @@
 import glob
 import networkx as nx
 
-import sys
+import qcopt
 
-sys.path.append("../")
+#import sys
 
-from utils.graph_funcs import graph_from_file
+#sys.path.append("../")
+
+#from utils.graph_funcs import graph_from_file
 
 
 def is_unique(folder, G):
     all_graphs = glob.glob(folder + "/*")
 
     for graph in all_graphs:
-        cur_G = graph_from_file(graph)
+        cur_G = qcopt.utils.graph_funcs.graph_from_file(graph)
         if nx.is_isomorphic(G, cur_G):
             return False
 
@@ -28,8 +30,8 @@ for folder in dirs:
     d = int(folder.split("_")[1][1:])
     print("Nodes: {}, degree: {}".format(n, d))
 
-    count = 0
-    while count < 30:
+    count = 30
+    while count < 50:
         G = nx.random_regular_graph(d, n)
         if nx.is_connected(G) and is_unique(folder, G):
             count += 1
