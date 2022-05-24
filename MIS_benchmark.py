@@ -72,7 +72,7 @@ def main():
     if args.alg not in [
         "qaoa",
         "dqva",
-        "qls",
+        # "qls",
         "cut_dqva",
         "qaoaHotStart",
         "dqvaHotStart",
@@ -86,6 +86,10 @@ def main():
 
     if "qaoa" in args.alg:
         savepath = DQVAROOT + f"benchmark_results/{args.alg}_IPM{args.ipm}_P{args.P}/"
+    elif "dqva" in args.alg:
+        if not args.plim:
+            raise ValueError("arg.plim must have an integer value for alg = dqva")
+        savepath = DQVAROOT + f"benchmark_results/{args.alg}_{args.plim}_partial_mixers/"
     else:
         savepath = DQVAROOT + f"benchmark_results/{args.alg}_P{args.P}/"
     savepath += f"{graph_type}/"
@@ -155,17 +159,18 @@ def main():
                     verbose=args.v,
                     threads=args.threads,
                 )
+            # elif args.alg == "dqva":
+            #    out = qcopt.dqva_mis.solve_mis(
+            #        init_state,
+            #        G,
+            #        P=args.P,
+            #        m=args.m,
+            #        shots=args.shots,
+            #        verbose=args.v,
+            #        threads=args.threads,
+            #    )
+            # elif args.alg == "qls":
             elif args.alg == "dqva":
-                out = qcopt.dqva_mis.solve_mis(
-                    init_state,
-                    G,
-                    P=args.P,
-                    m=args.m,
-                    shots=args.shots,
-                    verbose=args.v,
-                    threads=args.threads,
-                )
-            elif args.alg == "qls":
                 out = qcopt.limited_dqva_mis.solve_mis(
                     init_state,
                     G,

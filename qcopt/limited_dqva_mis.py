@@ -28,12 +28,12 @@ def solve_mis(
     threads=0,
 ):
     """
-    Find the MIS of G using Quantum Local Search (QLS), this
+    Find the MIS of G using the Dynamic Quantum Variational Ansatz (DQVA), this
     ansatz is composed of two types of unitaries: the cost unitary U_C and the
     mixer unitary U_M. The mixer U_M is made up of individual partial mixers
     which are independently parametrized.
 
-    QLS's key feature is the parameter limit which truncates the number of
+    The DQVA's key feature is the parameter limit which truncates the number of
     partial mixers that are applied at any one time, and its dynamic reuse of
     quantum resources (i.e. the partial mixers for qubits which are in the MIS
     are turned off and applied to other qubits not currently in the set)
@@ -187,9 +187,11 @@ def solve_mis(
                 "mixer_round": mixer_round,
                 "inner_round": inner_round,
                 "cost": opt_cost,
+                "function_evals": out["nfev"],
                 "init_state": cur_init_state,
                 "mixer_order": copy.copy(cur_permutation),
                 "num_params": num_params,
+                "cur_params": opt_params,
             }
             mixer_history.append(inner_history)
 
