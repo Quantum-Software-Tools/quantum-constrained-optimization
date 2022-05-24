@@ -4,7 +4,7 @@ date +%m_%d_%y-%H.%M.%S
 
 for pval in {1..7}
 do
-  for var in 1 26
+  for var in 26
   do
     max=$(expr $var + 24)
     echo $var $max
