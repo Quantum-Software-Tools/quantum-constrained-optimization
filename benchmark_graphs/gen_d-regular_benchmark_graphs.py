@@ -4,11 +4,11 @@ import networkx as nx
 
 import qcopt
 
-#import sys
+# import sys
 
-#sys.path.append("../")
+# sys.path.append("../")
 
-#from utils.graph_funcs import graph_from_file
+# from utils.graph_funcs import graph_from_file
 
 
 def is_unique(folder, G):

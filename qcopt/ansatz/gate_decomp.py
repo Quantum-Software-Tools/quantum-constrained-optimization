@@ -17,10 +17,10 @@ _cel = CustomEquivalenceLibrary = StandardEquivalenceLibrary
 
 # U gate
 
-q = QuantumRegister(1, 'q')
-theta = Parameter('theta')
-phi = Parameter('phi')
-lam = Parameter('lam')
+q = QuantumRegister(1, "q")
+theta = Parameter("theta")
+phi = Parameter("phi")
+lam = Parameter("lam")
 u_to_u3 = QuantumCircuit(q)
 u_to_u3.append(U3Gate(theta, phi, lam), [0])
 _cel.add_equivalence(UGate(theta, phi, lam), u_to_u3)

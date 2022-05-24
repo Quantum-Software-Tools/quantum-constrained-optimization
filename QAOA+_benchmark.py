@@ -22,8 +22,12 @@ def parse_args():
     parser.add_argument(
         "--threads", type=int, default=0, help="Number of threads to pass to Aer simulator"
     )
-    parser.add_argument("--lowerlim", type=float, default=0.1, help="Lower limit in the lambda range")
-    parser.add_argument("--upperlim", type=float, default=4, help="Uppler limit in the lambda range")
+    parser.add_argument(
+        "--lowerlim", type=float, default=0.1, help="Lower limit in the lambda range"
+    )
+    parser.add_argument(
+        "--upperlim", type=float, default=4, help="Uppler limit in the lambda range"
+    )
     parser.add_argument("--step", type=float, default=0.25, help="Step size in the lambda range")
     args = parser.parse_args()
     return args

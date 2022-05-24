@@ -17,12 +17,16 @@ def parse_args():
         "--graph", type=str, default=None, help="glob path to the benchmark graph(s)"
     )
     parser.add_argument("-P", type=int, default=1, help="P-value for algorithm")
-    parser.add_argument("--name", type=str, default='test', help="Give a unique name to distinguish the save file")
+    parser.add_argument(
+        "--name", type=str, default="test", help="Give a unique name to distinguish the save file"
+    )
     parser.add_argument("-v", type=int, default=1, help="verbose")
     parser.add_argument(
         "--threads", type=int, default=0, help="Number of threads to pass to Aer simulator"
     )
-    parser.add_argument("--lamda", type=float, default=0.1, help="Value of the penalty factor lambda")
+    parser.add_argument(
+        "--lamda", type=float, default=0.1, help="Value of the penalty factor lambda"
+    )
     args = parser.parse_args()
     return args
 
@@ -48,7 +52,9 @@ def main():
 
         G = qcopt.utils.graph_funcs.graph_from_file(graphfn)
         if args.v:
-            print(f'Evaluating rep{args.name} p = {args.P} QAOA+ on {graph_type}/{graphname} with lambda = {args.lamda:.4f}')
+            print(
+                f"Evaluating rep{args.name} p = {args.P} QAOA+ on {graph_type}/{graphname} with lambda = {args.lamda:.4f}"
+            )
 
         out = qcopt.qaoa_plus_mis.solve_mis(args.P, G, args.lamda, threads=args.threads)
 
@@ -69,4 +75,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
