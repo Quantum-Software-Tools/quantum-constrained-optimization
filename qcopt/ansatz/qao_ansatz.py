@@ -13,6 +13,7 @@ from typing import List, Optional, Union
 
 import networkx as nx
 import numpy as np
+import qiskit
 from qiskit import QuantumCircuit
 from qiskit.circuit import ControlledGate
 from qiskit.circuit import EquivalenceLibrary
@@ -86,6 +87,60 @@ def apply_phase_separator(circ: QuantumCircuit, gamma: float, G: nx.Graph):
         circ.rz(2 * gamma, qb)
 
 
+def split_and_cyclic_shift(circuit, n, k, decompose=0):
+    # (i)
+    circuit.cx(n-2, n-1)
+    circuit.cry(2 * np.arccos(np.sqrt(1/n)), n-1, n-2)
+    circuit.cx(n-2, n-1)
+
+    # (ii)_l
+    for l_index in range(2, k+1):
+        circuit.cx(n-l_index-1, n-1)
+        if decompose > 0:
+            circuit.ry(np.arccos(np.sqrt(l_index / n)), n-l_index-1)
+            circuit.ccx(n-1, n-l_index, n-l_index-1)
+            circuit.ry(-1*np.arccos(np.sqrt(l_index / n)), n-l_index-1)
+            circuit.ccx(n-1, n-l_index, n-l_index-1)
+        else:
+            ccry = qiskit.circuit.ControlledGate(
+                    "ccry",
+                    3,
+                    [2 * np.arccos(np.sqrt(l_index / n))],
+                    num_ctrl_qubits=2,
+                    ctrl_state="11",
+                    base_gate=qiskit.circuit.library.standard_gates.RYGate(2 * np.arccos(np.sqrt(l_index / n))),
+                )
+            circuit.append(ccry, [n-1, n-l_index, n-l_index-1])
+        circuit.cx(n-l_index-1, n-1)
+
+
+def dicke_state(circuit, l, decompose=0):
+    """Efficient state preparation of a Dicke State.
+
+    Based on the efficient circuit implementation given in the
+    paper https://arxiv.org/pdf/1904.07358.pdf.
+
+    Arguments
+    ---------
+    circuit: QuantumCircuit
+    l: int - Hamming weight of the Dicke State
+    decompose: int - Optional. Level of decomposition for the multi-controlled
+                     Ry gates.
+    """
+    n = circuit.num_qubits
+    for i in range(1, l+1):
+        circuit.x(n-i)
+    m = n
+    k = l
+    while m >= k + 2:
+        split_and_cyclic_shift(circuit, m, k, decompose=decompose)
+        m = m - 1
+    while k >= 1:
+        split_and_cyclic_shift(circuit, m, k, decompose=decompose)
+        m = m - 1
+        k = k - 1
+
+
 def gen_qaoa(
     G: nx.Graph,
     P: int,
@@ -109,14 +164,10 @@ def gen_qaoa(
         # for now, select the all zero state
         init_state = "0" * nq
     elif init_state == "W":
-        # Prepare the |W> initial state
-        # TODO: change this to improve simulation efficiency
-        W_vector = np.zeros(2 ** nq)
-        for i in range(len(W_vector)):
-            bitstr = "{:0{}b}".format(i, nq)
-            if qcopt.helper_funcs.hamming_weight(bitstr) == 1:
-                W_vector[i] = 1 / np.sqrt(nq)
-        qaoa_circ.initialize(W_vector, qaoa_circ.qubits)
+        # Prepare the |W> initial state (https://arxiv.org/pdf/1904.07358.pdf)
+        # dicke_state() adds the gates in-place
+        dicke_state(qaoa_circ, 1, decompose=decompose_toffoli)
+        qaoa_circ.barrier()
     else:
         for qb, bit in enumerate(reversed(init_state)):
             if bit == "1":

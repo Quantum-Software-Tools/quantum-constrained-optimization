@@ -159,17 +159,6 @@ def main():
                     verbose=args.v,
                     threads=args.threads,
                 )
-            # elif args.alg == "dqva":
-            #    out = qcopt.dqva_mis.solve_mis(
-            #        init_state,
-            #        G,
-            #        P=args.P,
-            #        m=args.m,
-            #        shots=args.shots,
-            #        verbose=args.v,
-            #        threads=args.threads,
-            #    )
-            # elif args.alg == "qls":
             elif args.alg == "dqva":
                 out = qcopt.limited_dqva_mis.solve_mis(
                     init_state,
