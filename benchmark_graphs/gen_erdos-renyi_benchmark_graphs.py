@@ -19,7 +19,7 @@ def is_unique(folder, G):
 
 N = 20
 
-for pval in [50]:
+for pval in [20, 80]:
     folder = f"N{N}_p{pval}_graphs/"
     print(folder)
     if not os.path.isdir(folder):

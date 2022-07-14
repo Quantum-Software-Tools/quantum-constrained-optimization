@@ -1,0 +1,6 @@
+N20_p20_graphs, G44
+Optimal MIS is 9
+Optimal MIS:
+	00001000011110001111, valid: True
+	00001000111110001110, valid: True
+	00101000101110101010, valid: True

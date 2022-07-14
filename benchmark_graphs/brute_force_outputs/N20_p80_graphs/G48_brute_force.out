@@ -1,0 +1,5 @@
+N20_p80_graphs, G48
+Optimal MIS is 4
+Optimal MIS:
+	00010000010000010001, valid: True
+	11110000000000000000, valid: True
