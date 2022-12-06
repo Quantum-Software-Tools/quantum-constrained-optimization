@@ -1,0 +1,7 @@
+N14_d3_graphs, G20
+Optimal MIS is 6
+Optimal MIS:
+	00110101001010, valid: True
+	01001000110101, valid: True
+	01001010100101, valid: True
+	10110101001000, valid: True
