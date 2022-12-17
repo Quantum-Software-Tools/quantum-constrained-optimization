@@ -4,37 +4,134 @@ import numpy as np
 import qcopt
 
 ######
+# total entangling gate counts
 def one_ancilla_barenco(gate_dict, largest_native_control):
-
     native_counts = 0 # total number of native entangling gates
     for gate, num_counts in gate_dict.items():
         num_controls = int(gate.split('_')[1])
         if num_controls <= largest_native_control:
             native_counts += 2 * num_counts
         elif largest_native_control == 1:
-            native_counts += (32 * num_controls - 28) * num_counts
+            # Special cases for S_2 gate set
+            if num_controls == 2:
+                native_counts += 6 * num_counts
+            elif num_controls == 3:
+                native_counts += 18 * num_counts
+            elif num_controls == 4:
+                native_counts += 42 * num_counts
+            else:
+                # Asymptotic case for S_2 gate set
+                native_counts += (16 * num_controls - 8) * num_counts
         elif largest_native_control == 2:
-            native_counts += (16 * num_controls - 56) * num_counts
+            # Special cases for S_3 gate set
+            if num_controls == 3:
+                native_counts += 4 * num_counts
+            elif num_controls == 4:
+                native_counts += 10 * num_counts
+            else:
+                # Asymptotic case for S_3 gate set
+                native_counts += (8 * num_controls - 24) * num_counts
         else:
             raise Exception("Only CX and Toffolis supported")
 
     return native_counts
 
 def n_ancilla_barenco(gate_dict, largest_native_control):
-
     native_counts = 0
     for gate, num_counts in gate_dict.items():
         num_controls = int(gate.split('_')[1])
         if num_controls <= largest_native_control:
             native_counts += 2 * num_counts
         elif largest_native_control == 1:
-            native_counts += (12 * num_controls - 18) * num_counts
+            # Special cases for S_2 gate set
+            if num_controls == 2:
+                native_counts += 6 * num_counts
+            else:
+                # Asymptotic case for S_2 gate set
+                native_counts += (6 * num_controls) * num_counts
         elif largest_native_control == 2:
-            native_counts += (2 * num_controls - 4) * num_counts
+            # Asymptotic case for S_3 gate set
+            native_counts += (2 * num_controls - 2) * num_counts
         else:
             raise Exception("Only CX and Toffolis supported")
 
     return native_counts
+
+def no_ancilla_qutrit(gate_dict):
+    native_counts = 0
+    for gate, num_counts in gate_dict.items():
+        num_controls = int(gate.split('_')[1])
+        if num_controls % 2 == 0 :
+            native_counts += (6 * (num_controls - 1) + 4) * num_counts
+        else:
+            native_counts += (6 * (num_controls - 1) + 2) * num_counts
+
+    return native_counts
+
+######
+# basis gate counts
+def one_ancilla_barenco_basis_counts(gate_dict, largest_native_control):
+    basis_gates = [0 for _ in range(largest_native_control)]
+    for gate, num_counts in gate_dict.items():
+        num_controls = int(gate.split('_')[1])
+        if num_controls <= largest_native_control:
+            basis_gates[num_controls-1] += 2 * num_counts
+        elif largest_native_control == 1:
+            # Special cases for S_2 gate set
+            if num_controls == 2:
+                basis_gates[0] += 6 * num_counts
+            elif num_controls == 3:
+                basis_gates[0] += 18 * num_counts
+            elif num_controls == 4:
+                basis_gates[0] += 42 * num_counts
+            else:
+                # Asymptotic case for S_2 gate set
+                basis_gates[0] += (16 * num_controls - 8) * num_counts
+        elif largest_native_control == 2:
+            # Special cases for S_3 gate set
+            if num_controls == 3:
+                basis_gates[1] += 4 * num_counts
+            elif num_controls == 4:
+                basis_gates[1] += 10 * num_counts
+            else:
+                # Asymptotic case for S_3 gate set
+                basis_gates[1] += (8 * num_controls - 24) * num_counts
+        else:
+            raise Exception("Only CX and Toffolis supported")
+
+    return basis_gates
+
+def n_ancilla_barenco_basis_counts(gate_dict, largest_native_control):
+    basis_gates = [0 for _ in range(largest_native_control)]
+    for gate, num_counts in gate_dict.items():
+        num_controls = int(gate.split('_')[1])
+        if num_controls <= largest_native_control:
+            basis_gates[num_controls-1] += 2 * num_counts
+        elif largest_native_control == 1:
+            # Special cases for S_2 gate set
+            if num_controls == 2:
+                basis_gates[0] += 6 * num_counts
+            else:
+                # Asymptotic case for S_2 gate set
+                basis_gates[0] += (6 * num_controls) * num_counts
+        elif largest_native_control == 2:
+            # Asymptotic case for S_3 gate set
+            basis_gates[1] += (2 * num_controls - 2) * num_counts
+        else:
+            raise Exception("Only CX and Toffolis supported")
+
+    return basis_gates
+
+def no_ancilla_qutrit_basis_counts(gate_dict):
+    native_counts = 0
+    for gate, num_counts in gate_dict.items():
+        num_controls = int(gate.split('_')[1])
+        if num_controls % 2 == 0 :
+            native_counts += (6 * num_controls - 8) * num_counts
+        else:
+            native_counts += (6 * num_controls - 4) * num_counts
+
+    return [native_counts]
 ######
 
 
@@ -46,8 +143,9 @@ def gen_3_regular_graph(size):
         if nx.is_connected(G):
             return G
 
-def gen_erdos_renyi_graph(size, edge_probability):
-    """Generate a random Erdos-Renyi graph with given edge probability."""
+def gen_erdos_renyi_graph(size, avg_degree):
+    """Generate a random Erdos-Renyi graph."""
+    edge_probability = avg_degree / (size - 1)
     while True:
         G = nx.generators.random_graphs.erdos_renyi_graph(size, edge_probability)
         if nx.is_connected(G):
