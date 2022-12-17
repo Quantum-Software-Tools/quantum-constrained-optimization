@@ -9,6 +9,7 @@ import qiskit
 from qiskit import Aer
 from qiskit.quantum_info import Statevector
 
+import qcopt
 from qcopt.ansatz import qlsa
 from qcopt.utils import graph_funcs, helper_funcs
 
@@ -21,11 +22,12 @@ def solve_mis(
     mixer_order=None,
     threshold=1e-5,
     cutoff=1,
-    sim="aer",
+    sim="statevector",
     shots=8192,
     verbose=0,
     param_lim=None,
     threads=0,
+    noisy: bool = False,
 ):
     """
     Find the MIS of G using the Dynamic Quantum Variational Ansatz (DQVA), this
@@ -40,16 +42,12 @@ def solve_mis(
     """
 
     # Initialization
-    if sim == "statevector" or sim == "qasm":
-        backend = Aer.get_backend(sim + "_simulator", max_parallel_threads=threads)
-    elif sim == "aer":
-        backend = Aer.get_backend(
-            name="aer_simulator", method="statevector", max_parallel_threads=threads
-        )
-    elif sim == "cloud":
-        raise Exception("NOT YET IMPLEMENTED")
-    else:
+    backend = Aer.get_backend("aer_simulator_statevector", max_parallel_threads=threads)
+    if sim == "cloud":
+        raise Exception("NOT YET IMPLEMENTED!")
+    elif sim not in ["statevector", "qasm"]:
         raise Exception("Unknown simulator:", sim)
+    noisy_backend = qcopt.noisy_sim.get_backend(max_parallel_threads=threads)
 
     # Select an ordering for the partial mixers
     if mixer_order == None:
@@ -74,19 +72,20 @@ def solve_mis(
             param_lim=param_lim,
         )
 
-        if sim == "qasm" or sim == "aer":
-            circ.measure_all()
-
         # Compute the cost function
-        result = qiskit.execute(circ, backend=backend, shots=shots).result()
-        if sim == "statevector":
-            statevector = Statevector(result.get_statevector(circ))
-            probs = helper_funcs.strip_ancillas(statevector.probabilities_dict(decimals=5), circ)
-        elif sim == "qasm" or sim == "aer":
-            counts = result.get_counts(circ)
-            probs = helper_funcs.strip_ancillas(
-                {key: val / shots for key, val in counts.items()}, circ
-            )
+        if not noisy:
+            if sim == "qasm":
+                circ.measure_all()
+            elif sim == "statevector":
+                circ.save_statevector()
+
+            result = qiskit.execute(circ, backend=backend, shots=shots).result()
+            if sim == "statevector":
+                probs = Statevector(result.get_statevector(circ)).probabilities_dict(decimals=7)
+            elif sim == "qasm":
+                probs = {key: val / shots for key, val in result.get_counts(circ).items()}
+        else:
+            probs = qcopt.noisy_sim.execute_and_prune(circ, G, noisy_backend)
 
         avg_cost = 0
         for sample in probs.keys():
@@ -151,20 +150,19 @@ def solve_mis(
                 param_lim=param_lim,
             )
 
-            if sim == "qasm" or sim == "aer":
-                opt_circ.measure_all()
+            if not noisy:
+                if sim == "qasm":
+                    opt_circ.measure_all()
+                elif sim == "statevector":
+                    opt_circ.save_statevector()
 
-            result = qiskit.execute(opt_circ, backend=backend, shots=shots).result()
-            if sim == "statevector":
-                statevector = Statevector(result.get_statevector(opt_circ))
-                probs = helper_funcs.strip_ancillas(
-                    statevector.probabilities_dict(decimals=5), opt_circ
-                )
-            elif sim == "qasm" or sim == "aer":
-                counts = result.get_counts(opt_circ)
-                probs = helper_funcs.strip_ancillas(
-                    {key: val / shots for key, val in counts.items()}, opt_circ
-                )
+                result = qiskit.execute(opt_circ, backend=backend, shots=shots).result()
+                if sim == "statevector":
+                    probs = Statevector(result.get_statevector(opt_circ)).probabilities_dict(decimals=7)
+                elif sim == "qasm":
+                    probs = {key: val / shots for key, val in result.get_counts(opt_circ).items()}
+            else:
+                probs = qcopt.noisy_sim.execute_and_prune(opt_circ, G, noisy_backend)
 
             # Select the top [cutoff] counts
             top_counts = sorted(
@@ -192,6 +190,7 @@ def solve_mis(
                 "mixer_order": copy.copy(cur_permutation),
                 "num_params": num_params,
                 "cur_params": opt_params,
+                "noisy": noisy,
             }
             mixer_history.append(inner_history)
 
