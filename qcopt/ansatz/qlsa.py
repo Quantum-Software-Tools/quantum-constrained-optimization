@@ -7,9 +7,14 @@ Local Search Ansatz (QLSA)
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit import ControlledGate
+from qiskit.circuit import EquivalenceLibrary
 from qiskit.circuit.library.standard_gates import RXGate
 from qiskit.transpiler.passes import Unroller
+from qiskit.transpiler.passes import BasisTranslator
 from qiskit.transpiler import PassManager
+from qiskit.converters import circuit_to_dag, dag_to_circuit
+
+from qcopt.ansatz.gate_decomp import CustomEquivalenceLibrary
 
 import qcopt
 
@@ -243,9 +248,14 @@ def gen_qlsa(
                 qls_circ.barrier()
 
     if decompose_toffoli > 1:
-        basis_gates = ["x", "h", "cx", "crx", "rz", "t", "tdg", "u1", "u2", "u3"]
-        pass_ = Unroller(basis_gates)
+        basis_gates_u = ["u1", "u2", "u3", "cx", "u"]
+        basis_gates = ["u1", "u2", "u3", "cx"]
+        pass_ = Unroller(basis_gates_u)
         pm = PassManager(pass_)
         qls_circ = pm.run(qls_circ)
+
+        bt_pass = BasisTranslator(CustomEquivalenceLibrary, basis_gates)
+        dag_out = bt_pass.run(circuit_to_dag(qls_circ))
+        qls_circ = dag_to_circuit(dag_out)
 
     return qls_circ
