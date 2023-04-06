@@ -6,18 +6,22 @@ from qiskit import Aer
 import qcopt
 
 
-def solve_mis(P, G, Lambda, shots=1024, threads=0):
+def solve_mis(P, G, Lambda, shots=1024, threads=0, noisy=False):
 
     backend = Aer.get_backend("aer_simulator_statevector", max_parallel_threads=threads)
+    noisy_backend = qcopt.noisy_sim.get_backend(max_parallel_threads=threads)
 
     def f(params):
-        circ = qcopt.ansatz.qaoa_plus.construct_qaoa_plus(P, G, params, measure=False)
-        circ.save_statevector()
+        circ = qcopt.qaoa_plus.construct_qaoa_plus(P, G, params, measure=False)
+        if not noisy:
+            circ.save_statevector()
 
-        result = qiskit.execute(circ, backend=backend, shots=shots).result()
-        probs = qiskit.quantum_info.Statevector(result.get_statevector(circ)).probabilities_dict(
-            decimals=7
-        )
+            result = qiskit.execute(circ, backend=backend, shots=shots).result()
+            probs = qiskit.quantum_info.Statevector(result.get_statevector(circ)).probabilities_dict(
+                decimals=7
+            )
+        else:
+            probs = qcopt.noisy_sim.execute_and_prune(circ, G, noisy_backend)
 
         return -1 * expectation_value(probs, G, Lambda)
 

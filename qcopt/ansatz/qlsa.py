@@ -4,13 +4,19 @@
 The functions in the file are used to generate the Quantum
 Local Search Ansatz (QLSA)
 """
-from qiskit import QuantumCircuit, AncillaRegister
+import numpy as np
+from qiskit import QuantumCircuit
 from qiskit.circuit import ControlledGate
-from qiskit.circuit.library.standard_gates import XGate
+from qiskit.circuit import EquivalenceLibrary
+from qiskit.circuit.library.standard_gates import RXGate
 from qiskit.transpiler.passes import Unroller
+from qiskit.transpiler.passes import BasisTranslator
 from qiskit.transpiler import PassManager
-from qcopt.utils.graph_funcs import *
-from qcopt.utils.helper_funcs import *
+from qiskit.converters import circuit_to_dag, dag_to_circuit
+
+from qcopt.ansatz.gate_decomp import CustomEquivalenceLibrary
+
+import qcopt
 
 
 def apply_mixer(circ, alpha, init_state, G, barriers, decompose_toffoli, mixer_order, verbose=0):
@@ -63,7 +69,6 @@ def apply_mixer(circ, alpha, init_state, G, barriers, decompose_toffoli, mixer_o
     if verbose > 0:
         print("init_state: {}, alpha: {}, pad_alpha: {}".format(init_state, alpha, pad_alpha))
 
-    anc_idx = 0
     for qubit in mixer_order:
         if pad_alpha[qubit] == None or not G.has_node(qubit):
             # Turn off mixers for qubits which are already 1
@@ -79,35 +84,28 @@ def apply_mixer(circ, alpha, init_state, G, barriers, decompose_toffoli, mixer_o
         # Instead, wrap a regular toffoli with X-gates
         ctrl_qubits = [circ.qubits[i] for i in neighbors]
         if decompose_toffoli > 0:
-            # apply the multi-controlled Toffoli, targetting the ancilla qubit
+            # Implement the multi-controlled Rx rotation using the decomposition given by
+            # Lemma 5.1 in Barenco et. al. (https://arxiv.org/pdf/quant-ph/9503016.pdf)
             for ctrl in ctrl_qubits:
                 circ.x(ctrl)
-            circ.mcx(ctrl_qubits, circ.ancillas[anc_idx])
+            circ.rz(np.pi / 2, circ.qubits[qubit])
+            circ.ry(pad_alpha[qubit], circ.qubits[qubit])
+            circ.mcx(ctrl_qubits, circ.qubits[qubit])
+            circ.ry(-1 * pad_alpha[qubit], circ.qubits[qubit])
+            circ.mcx(ctrl_qubits, circ.qubits[qubit])
+            circ.rz(-1 * np.pi / 2, circ.qubits[qubit])
             for ctrl in ctrl_qubits:
                 circ.x(ctrl)
         else:
-            mc_toffoli = ControlledGate(
-                "mc_toffoli",
+            mcrx = ControlledGate(
+                "mcrx",
                 len(neighbors) + 1,
-                [],
+                [2 * pad_alpha[qubit]],
                 num_ctrl_qubits=len(neighbors),
                 ctrl_state="0" * len(neighbors),
-                base_gate=XGate(),
+                base_gate=RXGate(2 * pad_alpha[qubit]),
             )
-            circ.append(mc_toffoli, ctrl_qubits + [circ.ancillas[anc_idx]])
-
-        # apply an X rotation controlled by the state of the ancilla qubit
-        circ.crx(2 * pad_alpha[qubit], circ.ancillas[anc_idx], circ.qubits[qubit])
-
-        # apply the same multi-controlled Toffoli to uncompute the ancilla
-        if decompose_toffoli > 0:
-            for ctrl in ctrl_qubits:
-                circ.x(ctrl)
-            circ.mcx(ctrl_qubits, circ.ancillas[anc_idx])
-            for ctrl in ctrl_qubits:
-                circ.x(ctrl)
-        else:
-            circ.append(mc_toffoli, ctrl_qubits + [circ.ancillas[anc_idx]])
+            circ.append(mcrx, ctrl_qubits + [circ.qubits[qubit]])
 
         if barriers > 1:
             circ.barrier()
@@ -180,8 +178,8 @@ def gen_qlsa(
     qls_circ = QuantumCircuit(nq, name="q")
 
     # Add an ancilla qubit for implementing the mixer unitaries
-    anc_reg = AncillaRegister(1, "anc")
-    qls_circ.add_register(anc_reg)
+    #anc_reg = AncillaRegister(1, "anc")
+    #qls_circ.add_register(anc_reg)
 
     # print('Init state:', init_state)
     for qb, bit in enumerate(reversed(init_state)):
@@ -191,7 +189,7 @@ def gen_qlsa(
         qls_circ.barrier()
 
     # check the number of variational parameters
-    num_nonzero = nq - hamming_weight(init_state)
+    num_nonzero = nq - qcopt.helper_funcs.hamming_weight(init_state)
     if param_lim is None:
         num_params = min(P * (nq + 1), (P + 1) * (num_nonzero + 1))
     else:
@@ -250,9 +248,14 @@ def gen_qlsa(
                 qls_circ.barrier()
 
     if decompose_toffoli > 1:
-        basis_gates = ["x", "h", "cx", "crx", "rz", "t", "tdg", "u1"]
-        pass_ = Unroller(basis_gates)
+        basis_gates_u = ["u1", "u2", "u3", "cx", "u"]
+        basis_gates = ["u1", "u2", "u3", "cx"]
+        pass_ = Unroller(basis_gates_u)
         pm = PassManager(pass_)
         qls_circ = pm.run(qls_circ)
+
+        bt_pass = BasisTranslator(CustomEquivalenceLibrary, basis_gates)
+        dag_out = bt_pass.run(circuit_to_dag(qls_circ))
+        qls_circ = dag_to_circuit(dag_out)
 
     return qls_circ

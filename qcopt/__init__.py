@@ -1,5 +1,6 @@
 from . import dqva_mis
 from . import limited_dqva_mis
+from . import noisy_sim
 from . import qaoansatz_mis
 from . import qaoa_plus_mis
 from .ansatz import dqva
@@ -15,6 +16,7 @@ from .utils import helper_funcs
 __all__ = [
     "dqva_mis",
     "limited_dqva_mis",
+    "noisy_sim",
     "qaoansatz_mis",
     "dqva",
     "dqv_ancilla_ansatz",

@@ -25,6 +25,7 @@ def solve_mis(
     shots: int = 8192,
     verbose: int = 0,
     threads: int = 0,
+    noisy: bool = False,
 ):
     """
     Find the MIS of G using the Quantum Alternating Operator Ansatz (QAOA).
@@ -46,6 +47,7 @@ def solve_mis(
         raise Exception("NOT YET IMPLEMENTED!")
     elif sim not in ["statevector", "qasm"]:
         raise Exception("Unknown simulator:", sim)
+    noisy_backend = qcopt.noisy_sim.get_backend(max_parallel_threads=threads)
 
     # Select an ordering for the partial mixers
     if mixer_order == None:
@@ -70,17 +72,20 @@ def solve_mis(
             verbose=0,
         )
 
-        if sim == "qasm":
-            circ.measure_all()
-        elif sim == "statevector":
-            circ.save_statevector()
-
         # Compute the cost function
-        result = qiskit.execute(circ, backend=backend, shots=shots).result()
-        if sim == "statevector":
-            probs = Statevector(result.get_statevector(circ)).probabilities_dict(decimals=7)
-        elif sim == "qasm":
-            probs = {key: val / shots for key, val in result.get_counts(circ).items()}
+        if not noisy:
+            if sim == "qasm":
+                circ.measure_all()
+            elif sim == "statevector":
+                circ.save_statevector()
+
+            result = qiskit.execute(circ, backend=backend, shots=shots).result()
+            if sim == "statevector":
+                probs = Statevector(result.get_statevector(circ)).probabilities_dict(decimals=7)
+            elif sim == "qasm":
+                probs = {key: val / shots for key, val in result.get_counts(circ).items()}
+        else:
+            probs = qcopt.noisy_sim.execute_and_prune(circ, G, noisy_backend)
 
         avg_cost = 0
         for sample in probs.keys():
@@ -124,16 +129,19 @@ def solve_mis(
         verbose=verbose,
     )
 
-    if sim == "qasm":
-        opt_circ.measure_all()
-    elif sim == "statevector":
-        opt_circ.save_statevector()
+    if not noisy:
+        if sim == "qasm":
+            opt_circ.measure_all()
+        elif sim == "statevector":
+            opt_circ.save_statevector()
 
-    result = qiskit.execute(opt_circ, backend=backend, shots=shots).result()
-    if sim == "statevector":
-        probs = Statevector(result.get_statevector(opt_circ)).probabilities_dict(decimals=7)
-    elif sim == "qasm":
-        probs = {key: val / shots for key, val in result.get_counts(opt_circ).items()}
+        result = qiskit.execute(opt_circ, backend=backend, shots=shots).result()
+        if sim == "statevector":
+            probs = Statevector(result.get_statevector(opt_circ)).probabilities_dict(decimals=7)
+        elif sim == "qasm":
+            probs = {key: val / shots for key, val in result.get_counts(opt_circ).items()}
+    else:
+        probs = qcopt.noisy_sim.execute_and_prune(opt_circ, G, noisy_backend)
 
     # Select the most probable bitstring as the output of the optimization
     top_counts = sorted(
@@ -167,6 +175,7 @@ def solve_mis(
         "opt_params": opt_params,
         "P": P,
         "individual_partial_mixers": individual_partial_mixers,
+        "noisy": noisy,
     }
 
     return data_dict
